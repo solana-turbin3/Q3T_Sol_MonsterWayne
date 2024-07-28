@@ -1,0 +1,10 @@
+/Users/karlwayneantoine/Downloads/LAB /WBA_Q3_2024/Prereq/rs/target/debug/deps/libunicase-ba4c9f13ebfe43a0.rmeta: /Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs /Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs /Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs /Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs
+
+/Users/karlwayneantoine/Downloads/LAB /WBA_Q3_2024/Prereq/rs/target/debug/deps/libunicase-ba4c9f13ebfe43a0.rlib: /Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs /Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs /Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs /Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs
+
+/Users/karlwayneantoine/Downloads/LAB /WBA_Q3_2024/Prereq/rs/target/debug/deps/unicase-ba4c9f13ebfe43a0.d: /Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs /Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs /Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs /Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs
+
+/Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs:
+/Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs:
+/Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs:
+/Users/karlwayneantoine/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs:

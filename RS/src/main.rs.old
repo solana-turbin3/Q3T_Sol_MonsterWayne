@@ -1,0 +1,5 @@
+use rs::wallet_to_base58;
+
+fn main() {
+    wallet_to_base58();
+}
