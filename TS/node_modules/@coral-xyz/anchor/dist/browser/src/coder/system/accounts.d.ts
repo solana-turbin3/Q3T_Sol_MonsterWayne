@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { AccountsCoder } from "../index.js";
-import { Idl } from "../../idl.js";
+import { Idl, IdlTypeDef } from "../../idl.js";
 export declare class SystemAccountsCoder<A extends string = string> implements AccountsCoder {
     private idl;
     constructor(idl: Idl);
@@ -8,6 +8,6 @@ export declare class SystemAccountsCoder<A extends string = string> implements A
     decode<T = any>(accountName: A, ix: Buffer): T;
     decodeUnchecked<T = any>(accountName: A, ix: Buffer): T;
     memcmp(accountName: A, _appendData?: Buffer): any;
-    size(accountName: A): number;
+    size(idlAccount: IdlTypeDef): number;
 }
 //# sourceMappingURL=accounts.d.ts.map

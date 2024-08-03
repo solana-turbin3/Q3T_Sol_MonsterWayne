@@ -1,11 +1,11 @@
 /// <reference types="node" />
 import { AccountMeta, PublicKey, TransactionInstruction } from "@solana/web3.js";
-import { Idl, IdlInstructionAccountItem, IdlInstruction } from "../../idl.js";
+import { Idl, IdlAccountItem, IdlInstruction } from "../../idl.js";
 import { Accounts } from "../context.js";
 import { AllInstructions, AllInstructionsMap, InstructionContextFn, MakeInstructionsNamespace } from "./types.js";
 export default class InstructionNamespaceFactory {
     static build<IDL extends Idl, I extends AllInstructions<IDL>>(idlIx: I, encodeFn: InstructionEncodeFn<I>, programId: PublicKey): InstructionFn<IDL, I>;
-    static accountsArray(ctx: Accounts | undefined, accounts: readonly IdlInstructionAccountItem[], programId: PublicKey, ixName?: string): AccountMeta[];
+    static accountsArray(ctx: Accounts | undefined, accounts: readonly IdlAccountItem[], programId: PublicKey, ixName?: string): AccountMeta[];
 }
 /**
  * The namespace provides functions to build [[TransactionInstruction]]
@@ -36,7 +36,7 @@ export default class InstructionNamespaceFactory {
  * });
  * ```
  */
-export type InstructionNamespace<IDL extends Idl = Idl, I extends IdlInstruction = AllInstructions<IDL>> = MakeInstructionsNamespace<IDL, I, TransactionInstruction, {
+export type InstructionNamespace<IDL extends Idl = Idl, I extends IdlInstruction = IDL["instructions"][number]> = MakeInstructionsNamespace<IDL, I, TransactionInstruction, {
     [M in keyof AllInstructionsMap<IDL>]: {
         accounts: (ctx: Accounts<AllInstructionsMap<IDL>[M]["accounts"][number]>) => unknown;
     };

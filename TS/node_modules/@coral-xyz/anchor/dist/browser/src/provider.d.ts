@@ -25,7 +25,7 @@ export declare class AnchorProvider implements Provider {
      * @param wallet     The wallet used to pay for and sign all transactions.
      * @param opts       Transaction confirmation options to use by default.
      */
-    constructor(connection: Connection, wallet: Wallet, opts?: ConfirmOptions);
+    constructor(connection: Connection, wallet: Wallet, opts: ConfirmOptions);
     static defaultOptions(): ConfirmOptions;
     /**
      * Returns a `Provider` with a wallet read from the local filesystem.

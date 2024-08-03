@@ -2,14 +2,14 @@
 import EventEmitter from "eventemitter3";
 import { Signer, PublicKey, TransactionInstruction, Commitment, GetProgramAccountsFilter, AccountInfo, RpcResponseAndContext, Context } from "@solana/web3.js";
 import Provider from "../../provider.js";
-import { Idl, IdlAccount } from "../../idl.js";
+import { Idl, IdlAccountDef } from "../../idl.js";
 import { Coder } from "../../coder/index.js";
 import { Address } from "../common.js";
 import { AllAccountsMap, IdlAccounts } from "./types.js";
 export default class AccountFactory {
     static build<IDL extends Idl>(idl: IDL, coder: Coder, programId: PublicKey, provider?: Provider): AccountNamespace<IDL>;
 }
-type NullableIdlAccount<IDL extends Idl> = IDL["accounts"] extends undefined ? IdlAccount : NonNullable<IDL["accounts"]>[number];
+type NullableIdlAccount<IDL extends Idl> = IDL["accounts"] extends undefined ? IdlAccountDef : NonNullable<IDL["accounts"]>[number];
 /**
  * The namespace provides handles to an [[AccountClient]] object for each
  * account in a program.
@@ -30,10 +30,10 @@ type NullableIdlAccount<IDL extends Idl> = IDL["accounts"] extends undefined ? I
  *
  * For the full API, see the [[AccountClient]] reference.
  */
-export type AccountNamespace<I extends Idl = Idl> = {
-    [A in keyof AllAccountsMap<I>]: AccountClient<I, A>;
+export type AccountNamespace<IDL extends Idl = Idl> = {
+    [N in keyof AllAccountsMap<IDL>]: AccountClient<IDL, N>;
 };
-export declare class AccountClient<IDL extends Idl = Idl, A extends keyof IdlAccounts<IDL> = keyof IdlAccounts<IDL>, N extends NullableIdlAccount<IDL> = NullableIdlAccount<IDL>, T = IdlAccounts<IDL>[A] extends Record<string, unknown> ? IdlAccounts<IDL>[A] : never> {
+export declare class AccountClient<IDL extends Idl = Idl, N extends keyof IdlAccounts<IDL> = keyof IdlAccounts<IDL>, A extends NullableIdlAccount<IDL> = NullableIdlAccount<IDL>, T = IdlAccounts<IDL>[N]> {
     /**
      * Returns the number of bytes in this account.
      */
@@ -54,8 +54,12 @@ export declare class AccountClient<IDL extends Idl = Idl, A extends keyof IdlAcc
      */
     get coder(): Coder;
     private _coder;
+    /**
+     * Returns the idl account.
+     */
+    get idlAccount(): A;
     private _idlAccount;
-    constructor(idl: IDL, idlAccount: N, programId: PublicKey, provider?: Provider, coder?: Coder);
+    constructor(idl: IDL, idlAccount: A, programId: PublicKey, provider?: Provider, coder?: Coder);
     /**
      * Returns a deserialized account, returning null if it doesn't exist.
      *
@@ -131,6 +135,20 @@ export declare class AccountClient<IDL extends Idl = Idl, A extends keyof IdlAcc
      * Returns an instruction for creating this account.
      */
     createInstruction(signer: Signer, sizeOverride?: number): Promise<TransactionInstruction>;
+    /**
+     * @deprecated since version 14.0.
+     *
+     * Function returning the associated account. Args are keys to associate.
+     * Order matters.
+     */
+    associated(...args: Array<PublicKey | Buffer>): Promise<T>;
+    /**
+     * @deprecated since version 14.0.
+     *
+     * Function returning the associated address. Args are keys to associate.
+     * Order matters.
+     */
+    associatedAddress(...args: Array<PublicKey | Buffer>): Promise<PublicKey>;
     getAccountInfo(address: Address, commitment?: Commitment): Promise<AccountInfo<Buffer> | null>;
     getAccountInfoAndContext(address: Address, commitment?: Commitment): Promise<RpcResponseAndContext<AccountInfo<Buffer> | null>>;
 }

@@ -10,8 +10,12 @@ export declare class BorshTypesCoder<N extends string = string> implements Types
      * Maps type name to a layout.
      */
     private typeLayouts;
+    /**
+     * IDL whose types will be coded.
+     */
+    private idl;
     constructor(idl: Idl);
-    encode<T = any>(name: N, type: T): Buffer;
-    decode<T = any>(name: N, data: Buffer): T;
+    encode<T = any>(typeName: N, type: T): Buffer;
+    decode<T = any>(typeName: N, typeData: Buffer): T;
 }
 //# sourceMappingURL=types.d.ts.map

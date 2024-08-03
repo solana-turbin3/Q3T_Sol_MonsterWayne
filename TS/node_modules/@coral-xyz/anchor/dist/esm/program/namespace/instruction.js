@@ -1,5 +1,4 @@
 import { TransactionInstruction, } from "@solana/web3.js";
-import { isCompositeAccounts, } from "../../idl.js";
 import { IdlError } from "../../error.js";
 import { toInstruction, translateAddress, validateAccounts, } from "../common.js";
 import { splitArgsAndCtx } from "../context.js";
@@ -38,25 +37,30 @@ export default class InstructionNamespaceFactory {
         }
         return accounts
             .map((acc) => {
-            if (isCompositeAccounts(acc)) {
+            // Nested accounts.
+            const nestedAccounts = "accounts" in acc ? acc.accounts : undefined;
+            if (nestedAccounts !== undefined) {
                 const rpcAccs = ctx[acc.name];
                 return InstructionNamespaceFactory.accountsArray(rpcAccs, acc.accounts, programId, ixName).flat();
             }
-            let pubkey;
-            try {
-                pubkey = translateAddress(ctx[acc.name]);
+            else {
+                const account = acc;
+                let pubkey;
+                try {
+                    pubkey = translateAddress(ctx[acc.name]);
+                }
+                catch (err) {
+                    throw new Error(`Wrong input type for account "${acc.name}" in the instruction accounts object${ixName !== undefined ? ' for instruction "' + ixName + '"' : ""}. Expected PublicKey or string.`);
+                }
+                const optional = account.isOptional && pubkey.equals(programId);
+                const isWritable = account.isMut && !optional;
+                const isSigner = account.isSigner && !optional;
+                return {
+                    pubkey,
+                    isWritable,
+                    isSigner,
+                };
             }
-            catch (err) {
-                throw new Error(`Wrong input type for account "${acc.name}" in the instruction accounts object${ixName !== undefined ? ' for instruction "' + ixName + '"' : ""}. Expected PublicKey or string.`);
-            }
-            const isOptional = acc.optional && pubkey.equals(programId);
-            const isWritable = Boolean(acc.writable && !isOptional);
-            const isSigner = Boolean(acc.signer && !isOptional);
-            return {
-                pubkey,
-                isWritable,
-                isSigner,
-            };
         })
             .flat();
     }

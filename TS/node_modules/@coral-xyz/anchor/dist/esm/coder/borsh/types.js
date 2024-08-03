@@ -5,34 +5,31 @@ import { IdlCoder } from "./idl.js";
  */
 export class BorshTypesCoder {
     constructor(idl) {
-        const types = idl.types;
-        if (!types) {
+        if (idl.types === undefined) {
             this.typeLayouts = new Map();
             return;
         }
-        const layouts = types
-            .filter((ty) => !ty.generics)
-            .map((ty) => [
-            ty.name,
-            IdlCoder.typeDefLayout({ typeDef: ty, types }),
-        ]);
+        const layouts = idl.types.map((acc) => {
+            return [acc.name, IdlCoder.typeDefLayout(acc, idl.types)];
+        });
         this.typeLayouts = new Map(layouts);
+        this.idl = idl;
     }
-    encode(name, type) {
+    encode(typeName, type) {
         const buffer = Buffer.alloc(1000); // TODO: use a tighter buffer.
-        const layout = this.typeLayouts.get(name);
+        const layout = this.typeLayouts.get(typeName);
         if (!layout) {
-            throw new Error(`Unknown type: ${name}`);
+            throw new Error(`Unknown type: ${typeName}`);
         }
         const len = layout.encode(type, buffer);
         return buffer.slice(0, len);
     }
-    decode(name, data) {
-        const layout = this.typeLayouts.get(name);
+    decode(typeName, typeData) {
+        const layout = this.typeLayouts.get(typeName);
         if (!layout) {
-            throw new Error(`Unknown type: ${name}`);
+            throw new Error(`Unknown type: ${typeName}`);
         }
-        return layout.decode(data);
+        return layout.decode(typeData);
     }
 }
 //# sourceMappingURL=types.js.map

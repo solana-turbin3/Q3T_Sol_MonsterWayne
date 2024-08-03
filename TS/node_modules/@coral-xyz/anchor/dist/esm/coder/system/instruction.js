@@ -1,10 +1,11 @@
 import BN from "bn.js";
 import * as BufferLayout from "buffer-layout";
+import camelCase from "camelcase";
 export class SystemInstructionCoder {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     constructor(_) { }
     encode(ixName, ix) {
-        switch (ixName) {
+        switch (camelCase(ixName)) {
             case "createAccount": {
                 return encodeCreateAccount(ix);
             }

@@ -1,6 +1,6 @@
 import * as BufferLayout from "buffer-layout";
 import { NONCE_ACCOUNT_LENGTH, PublicKey } from "@solana/web3.js";
-import { IdlCoder } from "../borsh/idl.js";
+import { accountSize } from "../common.js";
 export class SystemAccountsCoder {
     constructor(idl) {
         this.idl = idl;
@@ -43,8 +43,9 @@ export class SystemAccountsCoder {
             }
         }
     }
-    size(accountName) {
-        return IdlCoder.typeSize({ defined: { name: accountName } }, this.idl);
+    size(idlAccount) {
+        var _a;
+        return (_a = accountSize(this.idl, idlAccount)) !== null && _a !== void 0 ? _a : 0;
     }
 }
 function decodeNonceAccount(ix) {

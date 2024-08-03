@@ -1,16 +1,20 @@
+import camelCase from "camelcase";
 import EventEmitter from "eventemitter3";
 import { SystemProgram, } from "@solana/web3.js";
 import { getProvider } from "../../provider.js";
 import { BorshCoder } from "../../coder/index.js";
 import { translateAddress } from "../common.js";
+import * as pubkeyUtil from "../../utils/pubkey.js";
 import * as rpcUtil from "../../utils/rpc.js";
 export default class AccountFactory {
     static build(idl, coder, programId, provider) {
         var _a;
-        return ((_a = idl.accounts) !== null && _a !== void 0 ? _a : []).reduce((accountFns, acc) => {
-            accountFns[acc.name] = new AccountClient(idl, acc, programId, provider, coder);
-            return accountFns;
-        }, {});
+        const accountFns = {};
+        (_a = idl.accounts) === null || _a === void 0 ? void 0 : _a.forEach((idlAccount) => {
+            const name = camelCase(idlAccount.name);
+            accountFns[name] = new AccountClient(idl, idlAccount, programId, provider, coder);
+        });
+        return accountFns;
     }
 }
 export class AccountClient {
@@ -38,12 +42,18 @@ export class AccountClient {
     get coder() {
         return this._coder;
     }
+    /**
+     * Returns the idl account.
+     */
+    get idlAccount() {
+        return this._idlAccount;
+    }
     constructor(idl, idlAccount, programId, provider, coder) {
         this._idlAccount = idlAccount;
         this._programId = programId;
         this._provider = provider !== null && provider !== void 0 ? provider : getProvider();
         this._coder = coder !== null && coder !== void 0 ? coder : new BorshCoder(idl);
-        this._size = this._coder.accounts.size(idlAccount.name);
+        this._size = this._coder.accounts.size(idlAccount);
     }
     /**
      * Returns a deserialized account, returning null if it doesn't exist.
@@ -213,6 +223,25 @@ export class AccountClient {
             lamports: await this._provider.connection.getMinimumBalanceForRentExemption(sizeOverride !== null && sizeOverride !== void 0 ? sizeOverride : size),
             programId: this._programId,
         });
+    }
+    /**
+     * @deprecated since version 14.0.
+     *
+     * Function returning the associated account. Args are keys to associate.
+     * Order matters.
+     */
+    async associated(...args) {
+        const addr = await this.associatedAddress(...args);
+        return await this.fetch(addr);
+    }
+    /**
+     * @deprecated since version 14.0.
+     *
+     * Function returning the associated address. Args are keys to associate.
+     * Order matters.
+     */
+    async associatedAddress(...args) {
+        return await pubkeyUtil.associated(this._programId, ...args);
     }
     async getAccountInfo(address, commitment) {
         return await this._provider.connection.getAccountInfo(translateAddress(address), commitment);

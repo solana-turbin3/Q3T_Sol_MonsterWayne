@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { IdlEvent } from "../idl.js";
+import { IdlEvent, IdlTypeDef } from "../idl.js";
 import { Event } from "../program/event.js";
 export * from "./borsh/index.js";
 export * from "./system/index.js";
@@ -30,10 +30,10 @@ export interface StateCoder {
 }
 export interface AccountsCoder<A extends string = string> {
     encode<T = any>(accountName: A, account: T): Promise<Buffer>;
-    decode<T = any>(accountName: A, acc: Buffer): T;
-    decodeUnchecked<T = any>(accountName: A, acc: Buffer): T;
+    decode<T = any>(accountName: A, ix: Buffer): T;
+    decodeUnchecked<T = any>(accountName: A, ix: Buffer): T;
     memcmp(accountName: A, appendData?: Buffer): any;
-    size(accountName: A): number;
+    size(idlAccount: IdlTypeDef): number;
 }
 export interface InstructionCoder {
     encode(ixName: string, ix: any): Buffer;

@@ -1,3 +1,4 @@
+import camelCase from "camelcase";
 import InstructionFactory from "./instruction.js";
 import TransactionFactory from "./transaction.js";
 import RpcFactory from "./rpc.js";
@@ -29,8 +30,8 @@ export default class NamespaceFactory {
             const rpcItem = RpcFactory.build(idlIx, txItem, idlErrors, provider);
             const simulateItem = SimulateFactory.build(idlIx, txItem, idlErrors, provider, coder, programId, idl);
             const viewItem = ViewFactory.build(programId, idlIx, simulateItem, idl);
-            const methodItem = MethodsBuilderFactory.build(provider, programId, idlIx, ixItem, txItem, rpcItem, simulateItem, viewItem, account, idl.types || [], getCustomResolver === null || getCustomResolver === void 0 ? void 0 : getCustomResolver(idlIx));
-            const name = idlIx.name;
+            const methodItem = MethodsBuilderFactory.build(provider, programId, idlIx, ixItem, txItem, rpcItem, simulateItem, viewItem, account, idl.types || [], getCustomResolver && getCustomResolver(idlIx));
+            const name = camelCase(idlIx.name);
             instruction[name] = ixItem;
             transaction[name] = txItem;
             rpc[name] = rpcItem;

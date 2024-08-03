@@ -80,7 +80,7 @@ export async function simulateTransaction(connection, transaction, signers, comm
             addresses,
         };
     }
-    if (signers && signers.length > 0) {
+    if (signers) {
         config.sigVerify = true;
     }
     const args = [encodedTransaction, config];

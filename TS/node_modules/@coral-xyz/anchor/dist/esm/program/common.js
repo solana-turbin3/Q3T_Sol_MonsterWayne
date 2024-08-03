@@ -1,5 +1,4 @@
 import { PublicKey } from "@solana/web3.js";
-import { isCompositeAccounts, } from "../idl.js";
 export function parseIdlErrors(idl) {
     const errors = new Map();
     if (idl.errors) {
@@ -11,6 +10,7 @@ export function parseIdlErrors(idl) {
     }
     return errors;
 }
+// Allow either IdLInstruction or IdlStateMethod since the types share fields.
 export function toInstruction(idlIx, ...args) {
     if (idlIx.args.length != args.length) {
         throw new Error("Invalid argument length");
@@ -26,12 +26,12 @@ export function toInstruction(idlIx, ...args) {
 // Throws error if any account required for the `ix` is not given.
 export function validateAccounts(ixAccounts, accounts = {}) {
     ixAccounts.forEach((acc) => {
-        if (isCompositeAccounts(acc)) {
+        if ("accounts" in acc) {
             validateAccounts(acc.accounts, accounts[acc.name]);
         }
         else {
-            if (!accounts[acc.name]) {
-                throw new Error(`Account \`${acc.name}\` not provided.`);
+            if (accounts[acc.name] === undefined) {
+                throw new Error(`Invalid arguments: ${acc.name} not provided.`);
             }
         }
     });

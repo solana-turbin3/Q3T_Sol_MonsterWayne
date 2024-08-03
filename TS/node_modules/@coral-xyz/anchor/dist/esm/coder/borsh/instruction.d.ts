@@ -4,17 +4,24 @@ import { AccountMeta, PublicKey } from "@solana/web3.js";
 import { Idl } from "../../idl.js";
 import { InstructionCoder } from "../index.js";
 /**
+ * Namespace for global instruction function signatures (i.e. functions
+ * that aren't namespaced by the state or any of its trait implementations).
+ */
+export declare const SIGHASH_GLOBAL_NAMESPACE = "global";
+/**
  * Encodes and decodes program instructions.
  */
 export declare class BorshInstructionCoder implements InstructionCoder {
     private idl;
-    private ixLayouts;
+    private ixLayout;
     private sighashLayouts;
     constructor(idl: Idl);
     /**
      * Encodes a program instruction.
      */
     encode(ixName: string, ix: any): Buffer;
+    private _encode;
+    private static parseIxLayout;
     /**
      * Decodes a program instruction.
      */
