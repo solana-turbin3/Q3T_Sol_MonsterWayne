@@ -24,7 +24,7 @@ This can be done by invoking Solana’s native staking program
 This means the SOL is not immediately earning staking rewards
 
 
-Technical Considerations:
+*****Technical Considerations:
 
 PDA Authority: The PDA must have the authority to create and manage staking accounts.
 
@@ -43,7 +43,8 @@ This can be done by calling the withdraw_rewards instruction of Solana's staking
 Transfer to Creator: Once rewards are claimed, the smart contract transfers the SOL to the creator's treausry or a separate PDA owned by the creator.
 
 
-Technical Considerations:
+****Technical Considerations:
+
 Automation: You might want to automate the claiming and transfer of rewards periodically (e.g., daily, weekly). 
 This requires setting up a cron job or using a scheduled service.
 
@@ -62,6 +63,27 @@ This starts the unstaking process, which takes some time (usually an epoch or tw
 Withdrawal Period: During this period, the SOL is in a "deactivating" state and does not earn rewards. The platform must track the deactivation status.
 
 Completing Withdrawal: Once the unstaking period is over, the SOL is transferred back from the staking account to the creator's vault (PDA), and then it can be withdrawn to the user’s wallet.
+
+*****Technical Considerations:
+
+Partial Unstaking: If a user only withdraws part of their SOL, your smart contract needs logic to handle partial unstaking and manage the remaining staked balance.
+
+User Balance Tracking: The platform must keep accurate records of each user's deposited amount and the corresponding staked SOL. This ensures that when a user requests a withdrawal, the platform knows how much to unstake and transfer.
+
+Transaction Costs: Unstaking and withdrawing SOL also incur fees, which must be considered in your platform’s fee structure.
+
+
+=======Handling Multiple User Deposits and Withdrawals==============
+
+Because the creator's vault will contain deposits from multiple users, the platform must efficiently manage these funds:
+
+Tracking Deposits: Maintain a detailed ledger in the smart contract that records each user's deposit, staking status, and potential rewards.
+Proportional Unstaking: When a user withdraws, the platform must calculate the proportional unstaking needed. If multiple users withdraw simultaneously, the platform must ensure that enough SOL is unstaked to cover all requests without over-delegating.
+Rebalancing: After every deposit or withdrawal, you may need to rebalance the staking account to ensure maximum efficiency and minimize periods of un-staked SOL.
+
+
+
+
 
 
 
