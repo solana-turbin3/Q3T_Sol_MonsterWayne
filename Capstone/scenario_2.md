@@ -67,4 +67,13 @@ Tracking User Deposits: Maintain accurate records of each user’s deposited amo
 Withdrawal Fees: There might be fees associated with the withdrawal transaction, which should be transparently communicated to users.
 
 
+-------Handling Multiple User Deposits and Withdrawals
+
+Tracking Deposits and Yields: Use a detailed ledger in the smart contract that records each user's deposit amount, LST type, and timestamp. This ledger helps calculate accrued yields and manage withdrawals accurately.
+
+Handling Yield Growth: Since LSTs are yield-bearing, you must periodically check and record the yield growth. This ensures that any yield generated from a user's deposit stays with the creator even after withdrawals.
+
+Partial Withdrawals: Your platform should support partial withdrawals. Users might want to withdraw only a portion of their LSTs. The smart contract should have logic to handle partial withdrawals, including calculating the correct amount of yield to keep with the creator.
+
+
 
