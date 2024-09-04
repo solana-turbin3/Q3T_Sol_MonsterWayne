@@ -11,7 +11,7 @@ hero_anchor_program = "J3JVzqh9AVv1qcsquuUYmJggKEkKgifVxG48qiScC6jR"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "https://api.devnet.solana.com"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

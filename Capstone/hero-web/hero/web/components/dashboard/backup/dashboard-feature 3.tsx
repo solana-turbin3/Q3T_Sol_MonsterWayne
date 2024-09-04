@@ -8,7 +8,6 @@ import * as anchor from '@project-serum/anchor';
 import { idl } from '../solana/idl/hero_anchor_program';
 import { Idl } from '@project-serum/anchor';
 import { Address, AnchorProvider, BN, Program, Wallet } from "@coral-xyz/anchor";
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 const PROGRAM_ID = new PublicKey('J3JVzqh9AVv1qcsquuUYmJggKEkKgifVxG48qiScC6jR');
 
@@ -19,7 +18,6 @@ export default function DashboardFeature() {
   const [creatorData, setCreatorData] = useState<any>(null);
   const [userPDA, setUserPDA] = useState<string | null>(null);
   const [userData, setUserData] = useState<any>(null);
-  const [depositAmount, setDepositAmount] = useState<string>('');
 
   const getProgram = () => {
     console.log('Getting program');
@@ -190,50 +188,6 @@ export default function DashboardFeature() {
     }
   };
 
-  const handleDeposit = async () => {
-    console.log('Handling deposit');
-    if (!publicKey || !userData) {
-      console.log('No public key or user data available');
-      return;
-    }
-    try {
-      const program = getProgram();
-      console.log('Program obtained:', program);
-
-      const amount = new BN(parseFloat(depositAmount) * LAMPORTS_PER_SOL);
-      console.log('Deposit amount:', amount.toString());
-
-      const creatorPublicKey = new PublicKey(userData.creator);
-      const [userPDA] = await PublicKey.findProgramAddress(
-        [Buffer.from('user_vault'), publicKey.toBuffer(), creatorPublicKey.toBuffer()],
-        program.programId
-      );
-
-      console.log('Calling deposit method');
-      const tx = await program.methods.deposit(amount)
-        .accounts({
-          user: publicKey,
-          creator: creatorPublicKey,
-          userVault: userPDA,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        }).rpc();
-
-      console.log('Deposit method called successfully');
-      console.log('Transaction signature:', tx);
-
-      alert(`Deposit successful!\nTransaction signature: ${tx}`);
-      setDepositAmount('');
-      await fetchUserData();
-    } catch (error) {
-      console.error('Error depositing:', error);
-      if (error instanceof Error) {
-        alert(`Failed to deposit: ${error.message}`);
-      } else {
-        alert('Failed to deposit: Unknown error');
-      }
-    }
-  };
-
   useEffect(() => {
     if (publicKey) {
       fetchCreatorData();
@@ -282,27 +236,11 @@ export default function DashboardFeature() {
           ) : (
             <div className="bg-gray-100 p-4 rounded">
               <h3 className="text-lg font-semibold mb-2">User Data</h3>
-              <p>PDA Owner: {userData.pdaOwner?.toString() || 'N/A'}</p>
+              <p>PDA Owner: {userData.pda_owner?.toString() || 'N/A'}</p>
               <p>Creator: {userData.creator?.toString() || 'N/A'}</p>
               <p>Balance: {userData.balance?.toString() || '0'} lamports</p>
-              <p>Staked Amount: {userData.stakedAmount?.toString() || '0'} lamports</p>
-              <p>Stake Account: {userData.stakeAccount?.toString() || 'N/A'}</p>
-              
-              <div className="mt-4">
-                <input
-                  type="number"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  placeholder="Amount to deposit (SOL)"
-                  className="w-full p-2 border rounded"
-                />
-                <button
-                  onClick={handleDeposit}
-                  className="w-full mt-2 p-2 bg-green-500 text-white rounded hover:bg-green-600"
-                >
-                  Deposit SOL
-                </button>
-              </div>
+              <p>Staked Amount: {userData.staked_amount?.toString() || '0'} lamports</p>
+              <p>Stake Account: {userData.stake_account?.toString() || 'N/A'}</p>
             </div>
           )}
           {userPDA && (

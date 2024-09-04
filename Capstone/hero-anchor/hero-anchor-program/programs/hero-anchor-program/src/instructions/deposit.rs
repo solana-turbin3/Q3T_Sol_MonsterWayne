@@ -9,9 +9,7 @@ pub struct Deposit<'info> {
     pub creator: SystemAccount<'info>,
 
     #[account(
-        init,
-        payer = user,
-        space = 8 + UserVault::INIT_SPACE,
+        mut,
         seeds = [b"user_vault", user.key().as_ref(), creator.key().as_ref()],
         bump
     )]

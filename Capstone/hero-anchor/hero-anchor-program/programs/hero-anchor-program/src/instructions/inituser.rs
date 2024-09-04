@@ -21,11 +21,11 @@ pub struct InitUser<'info> {
 }
 
 impl<'info> InitUser<'info> {
-    pub fn init_user_vault(&mut self, amount: u64, bumps: &InitUserBumps) -> Result<()> {
+    pub fn init_user_vault(&mut self, amount: u64, creator: Pubkey, bumps: &InitUserBumps) -> Result<()> {
 
         self.user_vault.set_inner(UserVault {
             pda_owner: self.user.key(),
-            creator: self.creator.key(),
+            creator: creator.key(),
             balance: amount,
             staked_amount: amount,
             stake_account: Pubkey::default(),

@@ -4,10 +4,13 @@ use anchor_lang::prelude::*;
 #[derive(InitSpace)]
 pub struct CreatorVault {
     pub creator: Pubkey,
-    pub vote_account: Pubkey,
-    pub total_subscribers: u64,
-    #[max_len(100)]
-    pub subscribers: Vec<Pubkey>,
+   // #[max_len(5)]
+   // pub name: String,
+    //pub vote_account: Pubkey,
+  //  pub total_subscribers: u64,
+    //#[max_len(10)]
+   // pub subscribers: Vec<Pubkey>,
     pub balance: u64,
+   //pub fee_percentage: u8,
     pub bump: u8,
 }

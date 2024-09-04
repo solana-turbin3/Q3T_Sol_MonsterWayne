@@ -18,14 +18,16 @@ pub struct InitCreator<'info> {
 }
 
 impl<'info> InitCreator<'info> {
-    pub fn init_user_vault(&mut self, bumps: &InitCreatorBumps) -> Result<()> {
+    pub fn init_creator(&mut self, bumps: &InitCreatorBumps) -> Result<()> {
 
         self.creator_vault.set_inner(CreatorVault {
             creator: self.creator.key(),
-            vote_account: Pubkey::default(),
-            total_subscribers: 0,
-            subscribers: Vec::new(),
+            //vote_account: Pubkey::default(),
+            //total_subscribers: 0,
+            //subscribers: Vec::new(),
             balance: 0,
+           // fee_percentage: 0,
+          //  name : name,
             bump: bumps.creator_vault,
         });
 
