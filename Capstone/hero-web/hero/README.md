@@ -1,4 +1,4 @@
-# hero
+# hero2
 
 This project is generated with the [create-solana-dapp](https://github.com/solana-developers/create-solana-dapp) generator.
 

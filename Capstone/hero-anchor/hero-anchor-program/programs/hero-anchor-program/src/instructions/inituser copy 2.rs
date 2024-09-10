@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
-use crate::{state::UserVault, CreatorVault};
+use crate::state::UserVault;
 
 #[derive(Accounts)]
-//#[instruction(seed: u64)]
+#[instruction(seed: u64)]
 pub struct InitUser<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
@@ -10,17 +10,10 @@ pub struct InitUser<'info> {
     pub creator: SystemAccount<'info>,
 
     #[account(
-        mut,
-        seeds = [b"creator_vault", creator.key().as_ref()],
-        bump
-    )]
-    pub creator_vault: Account<'info, CreatorVault>,
-
-    #[account(
         init,
         payer = user,
         space = 8 + UserVault::INIT_SPACE,
-        seeds = [b"user_vault", user.key().as_ref(), creator_vault.name.as_ref()],
+        seeds = [b"user_vault", user.key().as_ref(), seed.to_le_bytes().as_ref()],
         bump
     )]
     pub user_vault: Account<'info, UserVault>,
@@ -29,7 +22,7 @@ pub struct InitUser<'info> {
 }
 
 impl<'info> InitUser<'info> {
-    pub fn init_user_vault(&mut self, creator: Pubkey, bumps: &InitUserBumps) -> Result<()> {
+    pub fn init_user_vault(&mut self, creator: Pubkey, bumps: &InitUserBumps, seed: u64) -> Result<()> {
 
         self.user_vault.set_inner(UserVault {
             pda_owner: self.user.key(),
@@ -39,7 +32,7 @@ impl<'info> InitUser<'info> {
             stake_account: Pubkey::default(),
             reward_amount: 0,
             last_epoch_time: 0,
-            //seed: seed,
+            seed: seed,
             bump: bumps.user_vault
         });
 

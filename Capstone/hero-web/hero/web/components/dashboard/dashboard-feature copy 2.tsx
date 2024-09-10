@@ -10,7 +10,7 @@ import { Idl } from '@project-serum/anchor';
 import { Address, AnchorProvider, BN, Program, Wallet } from "@coral-xyz/anchor";
 //import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
-const PROGRAM_ID = new PublicKey('DEXA1SPRbDf4tugo6TeePTqUnN9QNSiz1XRRdaMosWPa');
+const PROGRAM_ID = new PublicKey('EfVdsbEq2Eq56cDDtAqRcaepjNCfAKJGVpMDvcwPmKTK');
 
 export default function DashboardFeature() {
   const { publicKey } = useWallet();
@@ -290,97 +290,53 @@ export default function DashboardFeature() {
     }
     try {
       const program = getProgram();
-      const creatorPubkey = userData.creator;
+      console.log('Program obtained:', program);
 
-      // Fetch the creator vault to get the name
-      const [creatorVaultPDA] = await PublicKey.findProgramAddressSync(
-        [Buffer.from('creator_vault'), creatorPubkey.toBuffer()],
-        program.programId
-      );
-      const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
-      const creatorName = creatorVaultAccount.name;
-
-      // Derive the user vault PDA
-      const [userVaultPDA] = await PublicKey.findProgramAddressSync(
-        [Buffer.from('user_vault'), publicKey.toBuffer(), Buffer.from(creatorName)],
+      const [userPDA] = await PublicKey.findProgramAddress(
+        [Buffer.from('user_vault'), publicKey.toBuffer(), new PublicKey(userData.creator).toBuffer()],
         program.programId
       );
 
-      // Use the balance from the user vault PDA
-      const stakeAmount = new BN(userData.balance.toString());
-
-      // Create a new stake account
       const stakeAccount = Keypair.generate();
       const minimumRent = await connection.getMinimumBalanceForRentExemption(StakeProgram.space);
-      const amountToStake = stakeAmount.toNumber() - minimumRent;
+      const amountToStake = new BN(LAMPORTS_PER_SOL / 2); // 0.5 SOL for example
+      const totalAmount = minimumRent + amountToStake.toNumber();
 
-      // Create stake account transaction
-      const createStakeAccountTx = StakeProgram.createAccount({
+      // Create stake account
+      const createStakeAccountIx = StakeProgram.createAccount({
         fromPubkey: publicKey,
         stakePubkey: stakeAccount.publicKey,
-        authorized: new Authorized(userVaultPDA, userVaultPDA),
-        lockup: new Lockup(0, 0, userVaultPDA),
-        lamports: amountToStake,
+        authorized: new Authorized(userPDA, userPDA),
+        lockup: new Lockup(0, 0, publicKey),
+        lamports: totalAmount
       });
 
-      // Get a recent blockhash
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-
-      // Create the stake account
-      const createStakeAccountSignature = await sendAndConfirmTransaction(
-        connection,
-        createStakeAccountTx,
-        [stakeAccount],
-        { commitment: 'confirmed' }
-      );
-
-      console.log('Stake account created. Signature:', createStakeAccountSignature);
-
-      // Delegate the stake
-      const validatorVoteAccount = new PublicKey('5MrQ888HbPthezJu4kWg9bFfZg2FMLtQWzixQgNNX48B');
-      const delegateTx = StakeProgram.delegate({
+      // Delegate stake
+      const validatorVoteAccount = new PublicKey('5MrQ888HbPthezJu4kWg9bFfZg2FMLtQWzixQgNNX48B'); // Example validator
+      const delegateIx = StakeProgram.delegate({
         stakePubkey: stakeAccount.publicKey,
-        authorizedPubkey: userVaultPDA,
+        authorizedPubkey: userPDA,
         votePubkey: validatorVoteAccount,
       });
 
-      // Update the user vault with the new stake account
-      const updateStakeAccountIx = await program.methods
-        .updatestakeaccount(stakeAccount.publicKey, new BN(amountToStake))
+      // Update user vault PDA with stake account
+      const updateUserVaultIx = await program.methods.updateUserVaultStakeAccount(stakeAccount.publicKey)
         .accounts({
           user: publicKey,
-          creator: creatorPubkey,
-          userVault: userVaultPDA,
-          systemProgram: anchor.web3.SystemProgram.programId,
+          userVault: userPDA,
         })
         .instruction();
 
-      // Combine transactions
-      const transaction = new Transaction().add(createStakeAccountTx, delegateTx, updateStakeAccountIx);
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
+      // Create and send transaction
+      const tx = new Transaction().add(createStakeAccountIx, delegateIx, updateUserVaultIx);
+      const signature = await sendAndConfirmTransaction(connection, tx, [stakeAccount]);
 
-      // Sign the transaction with both the new stake account and the user's wallet
-      transaction.sign(stakeAccount);
-      const signedTx = await window.solana.signTransaction(transaction);
-
-      const signature = await connection.sendRawTransaction(signedTx.serialize());
-
-      await connection.confirmTransaction({
-        signature,
-        blockhash,
-        lastValidBlockHeight
-      });
-
-      console.log('Stake delegated and user vault updated successfully');
+      console.log('Stake account created, delegated, and user vault updated successfully');
       console.log('Transaction signature:', signature);
       setStakeAccountPubkey(stakeAccount.publicKey.toBase58());
       setValidatorPubkey(validatorVoteAccount.toBase58());
       setCreatorPubkey(userData.creator.toString());
       alert(`Stake account created, delegated, and user vault updated successfully!\nTransaction signature: ${signature}\nStake Account: ${stakeAccount.publicKey.toBase58()}`);
-      
-      // Refresh user data after staking
-      await fetchUserData();
     } catch (error) {
       console.error('Error creating stake account, delegating, and updating user vault:', error);
       if (error instanceof Error) {
@@ -433,18 +389,9 @@ export default function DashboardFeature() {
     try {
       const program = getProgram();
       const creatorPubkey = userData.creator; // This is already a PublicKey object
-
-      // Fetch the creator vault to get the name
-      const [creatorVaultPDA] = await PublicKey.findProgramAddressSync(
-        [Buffer.from('creator_vault'), creatorPubkey.toBuffer()],
-        program.programId
-      );
-      const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
-      const creatorName = creatorVaultAccount.name;
-
-      // Derive the user vault PDA using the correct seeds
+     // const creatorPubkey = new PublicKey("tVZyEqNfxXvFz5TZaRvggfxAnqjHksZdCp9BRQnXs35");
       const [userVaultPDA] = await PublicKey.findProgramAddressSync(
-        [Buffer.from('user_vault'), publicKey.toBuffer(), Buffer.from(creatorName)],
+        [Buffer.from('user_vault'), publicKey.toBuffer(), creatorPubkey.toBuffer()],
         program.programId
       );
 
@@ -455,7 +402,6 @@ export default function DashboardFeature() {
       const tx = await program.methods.withdrawandcloseuservault().accounts({
         user: publicKey,
         creator: creatorPubkey,
-        creatorVault: creatorVaultPDA,
         userVault: userVaultPDA,
         systemProgram: anchor.web3.SystemProgram.programId,
       }).rpc();

@@ -1,6 +1,13 @@
 use anchor_lang::prelude::*;
 
-declare_id!("J3JVzqh9AVv1qcsquuUYmJggKEkKgifVxG48qiScC6jR");
+//declare_id!("J3JVzqh9AVv1qcsquuUYmJggKEkKgifVxG48qiScC6jR");
+//declare_id!("9jm6oUjvfYaHpikCj1qb4SXKoqinvLhkKHBapW6oqu4n");
+//declare_id!("8SBjeeeyoCgekYKGBLd6p9nS7BwY62h1Smsc4riTbjAc");
+//declare_id!("5s6dWjXhUnv7EjVfAput2x8WAxB5vBsSQpKZbnDM4ZVC");
+//declare_id!("FyNFEUPNAmVfvjXdTriorh71vsC1jdMi2HxkHujnWWUM");
+declare_id!("DEXA1SPRbDf4tugo6TeePTqUnN9QNSiz1XRRdaMosWPa");
+
+
 
 mod instructions;
 mod state;
@@ -11,14 +18,16 @@ use state::*;
 
 #[program]
 pub mod hero_anchor_program {
+    
+
     use super::*;
 
-     pub fn initcreator(ctx: Context<InitCreator>) -> Result<()> {
-        ctx.accounts.init_creator(&ctx.bumps)
+     pub fn initcreator(ctx: Context<InitCreator>, name: String) -> Result<()> {
+        ctx.accounts.init_creator(name, &ctx.bumps)
     }
 
-    pub fn inituser(ctx: Context<InitUser>, amount: u64, creator: Pubkey) -> Result<()> {
-        ctx.accounts.init_user_vault(amount, creator, &ctx.bumps)
+    pub fn inituser(ctx: Context<InitUser>, creator: Pubkey) -> Result<()> {
+        ctx.accounts.init_user_vault( creator, &ctx.bumps)
 
     }
 
@@ -28,22 +37,36 @@ pub mod hero_anchor_program {
       
     }
 
-    pub fn update_stake_account(ctx: Context<UpdateStakeAccount>, stake_account: Pubkey) -> Result<()> {
-        ctx.accounts.user_vault.stake_account = stake_account;
-        Ok(())
-        
+    // pub fn update_user_vault_stake_account(ctx: Context<UpdateUserStakeAccount>, stake_account: Pubkey) -> Result<()> {
+    //     let user_vault = &mut ctx.accounts.user_vault;
+    //     user_vault.stake_account = stake_account;
+    //     Ok(())
+    // }
+
+    pub fn withdrawandcloseuservault(ctx: Context<WithdrawAndCloseUser>) -> Result<()> {
+        ctx.accounts.withdrawandcloseuservault()
     }
 
 
+    pub fn withdrawandclosecreatorvault(ctx: Context<WithdrawAndCloseCreator>) -> Result<()> {
+        ctx.accounts.withdrawandclosecreatorvault()
+    }
+
+    pub fn update_stake_account(ctx: Context<UpdateUserStakeAccount>, stake_account: Pubkey, amount: u64) -> Result<()> {
+        ctx.accounts.update_stake_account(stake_account, amount)
+    }
+
+//    pub fn create_stake_delegate(ctx: Context<CreateStakeDelegate>, amount: u64) -> Result<()> {
+//         ctx.accounts.create_stake_delegate(amount)
+//     }
+        
 }
 
-#[derive(Accounts)]
-pub struct Initialize {}
 
-#[derive(Accounts)]
-pub struct UpdateStakeAccount<'info> {
-    #[account(mut)]
-    pub user: Signer<'info>,
-    #[account(mut)]
-    pub user_vault: Account<'info, UserVault>,
-}
+
+
+// #[derive(Accounts)]
+// pub struct Initialize {}
+
+
+

@@ -316,10 +316,10 @@ export default function DashboardFeature() {
 
       // Create stake account transaction
       const createStakeAccountTx = StakeProgram.createAccount({
-        fromPubkey: publicKey,
+        fromPubkey: publicKey, // User's public key (signer)
         stakePubkey: stakeAccount.publicKey,
-        authorized: new Authorized(userVaultPDA, userVaultPDA),
-        lockup: new Lockup(0, 0, userVaultPDA),
+        authorized: new Authorized(userVaultPDA, userVaultPDA), // Set both authorities to userVaultPDA
+        lockup: new Lockup(0, 0, userVaultPDA), // Set lockup authority to userVaultPDA
         lamports: amountToStake,
       });
 
@@ -330,7 +330,7 @@ export default function DashboardFeature() {
       const createStakeAccountSignature = await sendAndConfirmTransaction(
         connection,
         createStakeAccountTx,
-        [stakeAccount],
+        [stakeAccount], // The user's wallet will sign this transaction automatically
         { commitment: 'confirmed' }
       );
 
@@ -340,7 +340,7 @@ export default function DashboardFeature() {
       const validatorVoteAccount = new PublicKey('5MrQ888HbPthezJu4kWg9bFfZg2FMLtQWzixQgNNX48B');
       const delegateTx = StakeProgram.delegate({
         stakePubkey: stakeAccount.publicKey,
-        authorizedPubkey: userVaultPDA,
+        authorizedPubkey: userVaultPDA, // The stake authority (userVaultPDA)
         votePubkey: validatorVoteAccount,
       });
 
@@ -356,14 +356,12 @@ export default function DashboardFeature() {
         .instruction();
 
       // Combine transactions
-      const transaction = new Transaction().add(createStakeAccountTx, delegateTx, updateStakeAccountIx);
+      const transaction = new Transaction().add(delegateTx, updateStakeAccountIx);
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = publicKey;
 
-      // Sign the transaction with both the new stake account and the user's wallet
-      transaction.sign(stakeAccount);
+      // Sign and send the transaction
       const signedTx = await window.solana.signTransaction(transaction);
-
       const signature = await connection.sendRawTransaction(signedTx.serialize());
 
       await connection.confirmTransaction({

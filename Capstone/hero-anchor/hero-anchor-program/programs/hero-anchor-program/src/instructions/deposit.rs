@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::*, system_program::{Transfer,transfer}};
-use crate::state::UserVault;
+use crate::{state::UserVault, CreatorVault};
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
@@ -10,8 +10,15 @@ pub struct Deposit<'info> {
 
     #[account(
         mut,
-        seeds = [b"user_vault", user.key().as_ref(), creator.key().as_ref()],
+        seeds = [b"creator_vault", creator.key().as_ref()],
         bump
+    )]
+    pub creator_vault: Account<'info, CreatorVault>,
+
+    #[account(
+        mut,
+        seeds = [b"user_vault", user.key().as_ref(), creator_vault.name.as_ref()],
+        bump = user_vault.bump
     )]
     pub user_vault: Account<'info, UserVault>,
 

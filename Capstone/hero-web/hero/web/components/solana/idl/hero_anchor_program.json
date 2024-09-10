@@ -1,5 +1,5 @@
 {
-  "address": "J3JVzqh9AVv1qcsquuUYmJggKEkKgifVxG48qiScC6jR",
+  "address": "5s6dWjXhUnv7EjVfAput2x8WAxB5vBsSQpKZbnDM4ZVC",
   "metadata": {
     "name": "hero_anchor_program",
     "version": "0.1.0",
@@ -7,6 +7,70 @@
     "description": "Created with Anchor"
   },
   "instructions": [
+    {
+      "name": "deposit",
+      "discriminator": [
+        242,
+        35,
+        198,
+        137,
+        82,
+        225,
+        242,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "creator"
+        },
+        {
+          "name": "user_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
     {
       "name": "initcreator",
       "discriminator": [
@@ -129,6 +193,147 @@
           "type": "pubkey"
         }
       ]
+    },
+    {
+      "name": "withdrawandclosecreatorvault",
+      "discriminator": [
+        166,
+        16,
+        204,
+        208,
+        64,
+        229,
+        184,
+        7
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "creator_pda",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  114,
+                  101,
+                  97,
+                  116,
+                  111,
+                  114,
+                  95,
+                  112,
+                  100,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "withdrawandcloseuservault",
+      "discriminator": [
+        184,
+        47,
+        172,
+        189,
+        218,
+        152,
+        177,
+        54
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "creator",
+          "writable": true
+        },
+        {
+          "name": "user_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator_pda",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  114,
+                  101,
+                  97,
+                  116,
+                  111,
+                  114,
+                  95,
+                  112,
+                  100,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -170,6 +375,10 @@
             "type": "pubkey"
           },
           {
+            "name": "total_subcribers",
+            "type": "u64"
+          },
+          {
             "name": "balance",
             "type": "u64"
           },
@@ -204,6 +413,14 @@
           {
             "name": "stake_account",
             "type": "pubkey"
+          },
+          {
+            "name": "reward_amount",
+            "type": "u64"
+          },
+          {
+            "name": "last_epoch_time",
+            "type": "i64"
           },
           {
             "name": "bump",
