@@ -347,7 +347,7 @@ export default function DashboardFeature() {
       tx.feePayer = publicKey;
 
       // Partially sign the transaction with the new stake account
-      tx.partialSign(stakeAccount);
+      //tx.partialSign(stakeAccount);
 
       // Sign the transaction with the user's wallet
       const signedTx = await window.solana.signTransaction(tx);
