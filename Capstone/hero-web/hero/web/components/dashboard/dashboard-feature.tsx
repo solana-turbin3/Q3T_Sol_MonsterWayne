@@ -283,199 +283,6 @@ export default function DashboardFeature() {
     }
   };
 
-  const createStakeAndDelegate = async () => {
-    if (!publicKey || !userData) {
-      console.log('No public key or user data available');
-      return;
-    }
-    try {
-      const program = getProgram();
-      const creatorPubkey = userData.creator;
-
-      // Fetch the creator vault to get the name
-      const [creatorVaultPDA] = await PublicKey.findProgramAddressSync(
-        [Buffer.from('creator_vault'), creatorPubkey.toBuffer()],
-        program.programId
-      );
-      const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
-      const creatorName = creatorVaultAccount.name;
-
-      // Derive the user vault PDA
-      const [userVaultPDA] = await PublicKey.findProgramAddressSync(
-        [Buffer.from('user_vault'), publicKey.toBuffer(), Buffer.from(creatorName)],
-        program.programId
-      );
-
-      // Use the balance from the user vault PDA
-      const stakeAmount = new BN(userData.balance.toString());
-
-      // Create a new stake account
-      const stakeAccount = Keypair.generate();
-      const minimumRent = await connection.getMinimumBalanceForRentExemption(StakeProgram.space);
-      const amountToStake = stakeAmount.toNumber() - minimumRent;
-
-      // Create stake account transaction
-      const createStakeAccountTx = StakeProgram.createAccount({
-        fromPubkey: publicKey,
-        stakePubkey: stakeAccount.publicKey,
-        authorized: new Authorized(userVaultPDA, userVaultPDA),
-        lockup: new Lockup(0, 0, userVaultPDA),
-        lamports: amountToStake,
-      });
-
-      // Get a recent blockhash
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-
-      // Create the stake account
-      const createStakeAccountSignature = await sendAndConfirmTransaction(
-        connection,
-        createStakeAccountTx,
-        [stakeAccount],
-        { commitment: 'confirmed' }
-      );
-
-      console.log('Stake account created. Signature:', createStakeAccountSignature);
-
-      // Delegate the stake
-      const validatorVoteAccount = new PublicKey('5MrQ888HbPthezJu4kWg9bFfZg2FMLtQWzixQgNNX48B');
-      const delegateTx = StakeProgram.delegate({
-        stakePubkey: stakeAccount.publicKey,
-        authorizedPubkey: userVaultPDA,
-        votePubkey: validatorVoteAccount,
-      });
-
-      // Update the user vault with the new stake account
-      const updateStakeAccountIx = await program.methods
-        .updatestakeaccount(stakeAccount.publicKey, new BN(amountToStake))
-        .accounts({
-          user: publicKey,
-          creator: creatorPubkey,
-          userVault: userVaultPDA,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .instruction();
-
-      // Combine transactions
-      const transaction = new Transaction().add(createStakeAccountTx, delegateTx, updateStakeAccountIx);
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
-
-      // Sign the transaction with both the new stake account and the user's wallet
-      transaction.sign(stakeAccount);
-      const signedTx = await window.solana.signTransaction(transaction);
-
-      const signature = await connection.sendRawTransaction(signedTx.serialize());
-
-      await connection.confirmTransaction({
-        signature,
-        blockhash,
-        lastValidBlockHeight
-      });
-
-      console.log('Stake delegated and user vault updated successfully');
-      console.log('Transaction signature:', signature);
-      setStakeAccountPubkey(stakeAccount.publicKey.toBase58());
-      setValidatorPubkey(validatorVoteAccount.toBase58());
-      setCreatorPubkey(userData.creator.toString());
-      alert(`Stake account created, delegated, and user vault updated successfully!\nTransaction signature: ${signature}\nStake Account: ${stakeAccount.publicKey.toBase58()}`);
-      
-      // Refresh user data after staking
-      await fetchUserData();
-    } catch (error) {
-      console.error('Error creating stake account, delegating, and updating user vault:', error);
-      if (error instanceof Error) {
-        alert(`Failed to create stake account, delegate, and update user vault: ${error.message}`);
-      } else {
-        alert('Failed to create stake account, delegate, and update user vault: Unknown error');
-      }
-    }
-  };
-
-  const handleCreatorWithdraw = async () => {
-    if (!publicKey) {
-      console.log('No public key available');
-      return;
-    }
-    try {
-      const program = getProgram();
-      const [creatorPDA] = await PublicKey.findProgramAddressSync(
-        [Buffer.from('creator_pda'), publicKey.toBuffer()],
-        program.programId
-      );
-
-      const tx = await program.methods.withdrawandclosecreatorvault().accounts({
-        creator: publicKey,
-        creatorPda: creatorPDA,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      }).rpc();
-
-      console.log('Creator vault withdrawn and closed successfully');
-      console.log('Transaction signature:', tx);
-      alert(`Creator vault withdrawn and closed successfully!\nTransaction signature: ${tx}`);
-      
-      // Refresh creator data after withdrawal
-      await fetchCreatorData();
-    } catch (error) {
-      console.error('Error withdrawing and closing creator vault:', error);
-      if (error instanceof Error) {
-        alert(`Failed to withdraw and close creator vault: ${error.message}`);
-      } else {
-        alert('Failed to withdraw and close creator vault: Unknown error');
-      }
-    }
-  };
-
-  const handleUserWithdraw = async () => {
-    if (!publicKey || !userData) {
-      console.log('No public key or user data available');
-      return;
-    }
-    try {
-      const program = getProgram();
-      const creatorPubkey = userData.creator; // This is already a PublicKey object
-
-      // Fetch the creator vault to get the name
-      const [creatorVaultPDA] = await PublicKey.findProgramAddressSync(
-        [Buffer.from('creator_vault'), creatorPubkey.toBuffer()],
-        program.programId
-      );
-      const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
-      const creatorName = creatorVaultAccount.name;
-
-      // Derive the user vault PDA using the correct seeds
-      const [userVaultPDA] = await PublicKey.findProgramAddressSync(
-        [Buffer.from('user_vault'), publicKey.toBuffer(), Buffer.from(creatorName)],
-        program.programId
-      );
-
-      console.log('User public key:', publicKey.toBase58());
-      console.log('Creator public key:', creatorPubkey.toBase58());
-      console.log('User Vault PDA:', userVaultPDA.toBase58());
-
-      const tx = await program.methods.withdrawandcloseuservault().accounts({
-        user: publicKey,
-        creator: creatorPubkey,
-        creatorVault: creatorVaultPDA,
-        userVault: userVaultPDA,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      }).rpc();
-
-      console.log('User vault withdrawn and closed successfully');
-      console.log('Transaction signature:', tx);
-      alert(`User vault withdrawn and closed successfully!\nTransaction signature: ${tx}`);
-      
-      // Refresh user data after withdrawal
-      await fetchUserData();
-    } catch (error) {
-      console.error('Error withdrawing and closing user vault:', error);
-      if (error instanceof Error) {
-        alert(`Failed to withdraw and close user vault: ${error.message}`);
-      } else {
-        alert('Failed to withdraw and close user vault: Unknown error');
-      }
-    }
-  };
-
   const stakeSOL = async () => {
     if (!publicKey || !userData) {
       console.log('No public key or user data available');
@@ -563,6 +370,91 @@ export default function DashboardFeature() {
         alert(`Failed to stake SOL: ${error.message}`);
       } else {
         alert('Failed to stake SOL: Unknown error');
+      }
+    }
+  };
+
+  const handleCreatorWithdraw = async () => {
+    if (!publicKey) {
+      console.log('No public key available');
+      return;
+    }
+    try {
+      const program = getProgram();
+      const [creatorPDA] = await PublicKey.findProgramAddressSync(
+        [Buffer.from('creator_pda'), publicKey.toBuffer()],
+        program.programId
+      );
+
+      const tx = await program.methods.withdrawandclosecreatorvault().accounts({
+        creator: publicKey,
+        creatorPda: creatorPDA,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      }).rpc();
+
+      console.log('Creator vault withdrawn and closed successfully');
+      console.log('Transaction signature:', tx);
+      alert(`Creator vault withdrawn and closed successfully!\nTransaction signature: ${tx}`);
+      
+      // Refresh creator data after withdrawal
+      await fetchCreatorData();
+    } catch (error) {
+      console.error('Error withdrawing and closing creator vault:', error);
+      if (error instanceof Error) {
+        alert(`Failed to withdraw and close creator vault: ${error.message}`);
+      } else {
+        alert('Failed to withdraw and close creator vault: Unknown error');
+      }
+    }
+  };
+
+  const handleUserWithdraw = async () => {
+    if (!publicKey || !userData) {
+      console.log('No public key or user data available');
+      return;
+    }
+    try {
+      const program = getProgram();
+      const creatorPubkey = userData.creator; // This is already a PublicKey object
+
+      // Fetch the creator vault to get the name
+      const [creatorVaultPDA] = await PublicKey.findProgramAddressSync(
+        [Buffer.from('creator_vault'), creatorPubkey.toBuffer()],
+        program.programId
+      );
+      const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
+      const creatorName = creatorVaultAccount.name;
+
+      // Derive the user vault PDA using the correct seeds
+      const [userVaultPDA] = await PublicKey.findProgramAddressSync(
+        [Buffer.from('user_vault'), publicKey.toBuffer(), Buffer.from(creatorName)],
+        program.programId
+      );
+
+      console.log('User public key:', publicKey.toBase58());
+      console.log('Creator public key:', creatorPubkey.toBase58());
+      console.log('User Vault PDA:', userVaultPDA.toBase58());
+
+      const tx = await program.methods.withdrawandcloseuservault().accounts({
+        user: publicKey,
+        creator: creatorPubkey,
+        creatorVault: creatorVaultPDA,
+        userVault: userVaultPDA,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      }).rpc();
+
+      console.log('User vault withdrawn and closed successfully');
+      console.log('Transaction signature:', tx);
+      alert(`User vault withdrawn and closed successfully!\nTransaction signature: ${tx}`);
+      
+      // Refresh user data after withdrawal
+      await fetchUserData();
+    } catch (error) {
+      console.error('Error withdrawing and closing user vault:', error);
+      if (error instanceof Error) {
+        alert(`Failed to withdraw and close user vault: ${error.message}`);
+      } else {
+        alert('Failed to withdraw and close user vault: Unknown error');
       }
     }
   };
