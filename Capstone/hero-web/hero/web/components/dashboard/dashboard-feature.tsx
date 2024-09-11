@@ -10,7 +10,7 @@ import { Idl } from '@project-serum/anchor';
 import { Address, AnchorProvider, BN, Program, Wallet } from "@coral-xyz/anchor";
 //import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
-const PROGRAM_ID = new PublicKey('DEXA1SPRbDf4tugo6TeePTqUnN9QNSiz1XRRdaMosWPa');
+const PROGRAM_ID = new PublicKey('6DpKqeB8ehecwyhZxoUKqizxpWcM1fBvWCr8y6dkhnWL');
 
 export default function DashboardFeature() {
   const { publicKey } = useWallet();
@@ -62,7 +62,7 @@ export default function DashboardFeature() {
       const program = getProgram();
       console.log('Program obtained:', program);
       console.log('Finding program address');
-      const [creatorPDA] = await PublicKey.findProgramAddress(
+      const [creatorPDA] = await PublicKey.findProgramAddressSync(
         [Buffer.from('creator_vault'), publicKey.toBuffer()],
         program.programId
       );
@@ -194,7 +194,7 @@ export default function DashboardFeature() {
 
     try {
       const program = getProgram();
-      const [creatorPDA] = await PublicKey.findProgramAddress(
+      const [creatorPDA] = await PublicKey.findProgramAddressSync(
         [Buffer.from('creator_vault'), publicKey.toBuffer()],
         program.programId
       );
@@ -258,7 +258,7 @@ export default function DashboardFeature() {
       const amount = new BN(parseFloat(depositAmount) * LAMPORTS_PER_SOL);
       const creatorPublicKey = publicKey; // Assuming the creator is the same as the user for this example
 
-      const [userVaultPDA] = await PublicKey.findProgramAddress(
+      const [userVaultPDA] = await PublicKey.findProgramAddressSync(
         [Buffer.from('user_vault'), publicKey.toBuffer(), creatorPublicKey.toBuffer()],
         program.programId
       );
@@ -398,7 +398,7 @@ export default function DashboardFeature() {
     }
     try {
       const program = getProgram();
-      const [creatorPDA] = await PublicKey.findProgramAddress(
+      const [creatorPDA] = await PublicKey.findProgramAddressSync(
         [Buffer.from('creator_pda'), publicKey.toBuffer()],
         program.programId
       );
@@ -472,6 +472,76 @@ export default function DashboardFeature() {
         alert(`Failed to withdraw and close user vault: ${error.message}`);
       } else {
         alert('Failed to withdraw and close user vault: Unknown error');
+      }
+    }
+  };
+
+  const stakeSOL = async () => {
+    if (!publicKey || !userData) {
+      console.log('No public key or user data available');
+      return;
+    }
+    try {
+      const program = getProgram();
+      const creatorPubkey = userData.creator;
+
+      // Fetch the creator vault to get the name
+      const [creatorVaultPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from('creator_vault'), creatorPubkey.toBuffer()],
+        program.programId
+      );
+      const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
+      const creatorName = creatorVaultAccount.name;
+
+      // Derive the user vault PDA
+      const [userVaultPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from('user_vault'), publicKey.toBuffer(), Buffer.from(creatorName)],
+        program.programId
+      );
+
+      // Amount to stake
+      const amountToStake = new BN(userData.balance.toString());
+
+      let blockhash = (await connection.getLatestBlockhash('finalized')).blockhash;
+
+      const tx = await program.methods.stakesol(amountToStake)
+        .accounts({
+          user: publicKey,
+          creator: creatorPubkey,
+          userVault: userVaultPDA,
+          creatorVault: creatorVaultPDA,
+          validatorVote: new PublicKey('5MrQ888HbPthezJu4kWg9bFfZg2FMLtQWzixQgNNX48B'),
+          stakeAccount: anchor.web3.Keypair.generate().publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          stakeProgram: StakeProgram.programId,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          stakeHistory: anchor.web3.SYSVAR_STAKE_HISTORY_PUBKEY,
+          stakeConfig: new PublicKey('StakeConfig11111111111111111111111111111111'),
+        })
+        .transaction();
+
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = publicKey;
+
+      // Sign the transaction with the user's wallet
+      const signedTx = await window.solana.signTransaction(tx);
+
+      // Send and confirm the transaction
+      const signature = await connection.sendTransaction(tx, [signedTx]);
+
+      console.log('SOL staked successfully');
+      console.log('Transaction signature:', signature);
+      alert(`SOL staked successfully!\nTransaction signature: ${signature}`);
+      
+      // Refresh user data after staking
+      await fetchUserData();
+    } catch (error) {
+      console.error('Error staking SOL:', error);
+      if (error instanceof Error) {
+        alert(`Failed to stake SOL: ${error.message}`);
+      } else {
+        alert('Failed to stake SOL: Unknown error');
       }
     }
   };
@@ -599,10 +669,10 @@ export default function DashboardFeature() {
           {userData && (
             <div className="mt-4">
               <button
-                onClick={createStakeAndDelegate}
+                onClick={stakeSOL}
                 className="w-full p-2 bg-green-500 text-white rounded hover:bg-green-600"
               >
-                Create Stake Account and Delegate
+                Stake SOL
               </button>
               {stakeAccountPubkey && (
                 <div className="mt-2 text-sm">

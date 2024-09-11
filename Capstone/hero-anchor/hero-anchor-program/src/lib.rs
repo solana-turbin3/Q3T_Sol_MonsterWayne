@@ -5,7 +5,10 @@ use anchor_lang::prelude::*;
 //declare_id!("8SBjeeeyoCgekYKGBLd6p9nS7BwY62h1Smsc4riTbjAc");
 //declare_id!("5s6dWjXhUnv7EjVfAput2x8WAxB5vBsSQpKZbnDM4ZVC");
 //declare_id!("FyNFEUPNAmVfvjXdTriorh71vsC1jdMi2HxkHujnWWUM");
-declare_id!("DEXA1SPRbDf4tugo6TeePTqUnN9QNSiz1XRRdaMosWPa");
+//declare_id!("DEXA1SPRbDf4tugo6TeePTqUnN9QNSiz1XRRdaMosWPa");
+
+declare_id!("6DpKqeB8ehecwyhZxoUKqizxpWcM1fBvWCr8y6dkhnWL");
+
 
 
 
@@ -52,13 +55,25 @@ pub mod hero_anchor_program {
         ctx.accounts.withdrawandclosecreatorvault()
     }
 
-    pub fn update_stake_account(ctx: Context<UpdateUserStakeAccount>, stake_account: Pubkey, amount: u64) -> Result<()> {
-        ctx.accounts.update_stake_account(stake_account, amount)
+    // pub fn update_stake_account(ctx: Context<UpdateUserStakeAccount>, stake_account: Pubkey, amount: u64) -> Result<()> {
+    //     ctx.accounts.update_stake_account(stake_account, amount)
+    // }
+
+    pub fn stake_sol(ctx: Context<StakeSol>, amount: u64) -> Result<()> {
+        ctx.accounts.stake_sol(amount)
     }
 
 //    pub fn create_stake_delegate(ctx: Context<CreateStakeDelegate>, amount: u64) -> Result<()> {
 //         ctx.accounts.create_stake_delegate(amount)
 //     }
+
+    pub fn unstake_sol(ctx: Context<UnstakeSol>) -> Result<()> {
+        ctx.accounts.unstake_sol()
+    }
+
+    pub fn withdraw_unstaked_sol(ctx: Context<WithdrawUnstakedSol>) -> Result<()> {
+        ctx.accounts.withdraw_unstaked_sol()
+    }
         
 }
 

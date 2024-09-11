@@ -5,9 +5,12 @@ pub mod initcreator;
 pub mod stakesol;
 
 //pub mod createstakedeleguate;
-pub mod updateuserstakeaccount;
+//pub mod updateuserstakeaccount;
 pub mod withdrawandclosecreator;
 pub mod withdrawandcloseuser;
+pub mod unstakesol;
+pub mod withdrawunstakedsol;
+
 
 
 
@@ -19,6 +22,8 @@ pub use deposit::*;
 pub use initcreator::*;
 pub use stakesol::*;
 //pub use createstakedeleguate::*;
-pub use updateuserstakeaccount::*;  
+//pub use updateuserstakeaccount::*;  
 pub use withdrawandclosecreator::*;
 pub use withdrawandcloseuser::*;
+pub use unstakesol::*;
+pub use withdrawunstakedsol::*;

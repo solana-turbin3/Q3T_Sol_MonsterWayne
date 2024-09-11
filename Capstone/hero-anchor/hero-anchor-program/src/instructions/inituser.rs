@@ -40,7 +40,9 @@ impl<'info> InitUser<'info> {
             reward_amount: 0,
             last_epoch_time: 0,
             //seed: seed,
-            bump: bumps.user_vault
+            bump: bumps.user_vault,
+            is_stake_active: false,
+            last_reward_claim_time: 0,
         });
 
         Ok(())

@@ -12,4 +12,6 @@ pub struct UserVault {
     pub last_epoch_time: i64,
     //pub seed: u64,
     pub bump: u8,
+    pub is_stake_active: bool,
+    pub last_reward_claim_time: i64,
 }
