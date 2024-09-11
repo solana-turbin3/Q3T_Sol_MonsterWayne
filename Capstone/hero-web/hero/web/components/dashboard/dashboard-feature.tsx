@@ -486,7 +486,7 @@ export default function DashboardFeature() {
       const creatorPubkey = userData.creator;
 
       // Fetch the creator vault to get the name
-      const [creatorVaultPDA] = PublicKey.findProgramAddressSync(
+      const [creatorVaultPDA] = await PublicKey.findProgramAddressSync(
         [Buffer.from('creator_vault'), creatorPubkey.toBuffer()],
         program.programId
       );
@@ -494,33 +494,49 @@ export default function DashboardFeature() {
       const creatorName = creatorVaultAccount.name;
 
       // Derive the user vault PDA
-      const [userVaultPDA] = PublicKey.findProgramAddressSync(
+      const [userVaultPDA] = await PublicKey.findProgramAddressSync(
         [Buffer.from('user_vault'), publicKey.toBuffer(), Buffer.from(creatorName)],
         program.programId
       );
 
-      // Amount to stake
+      // Create a new stake account
+      const stakeAccount = Keypair.generate();
+
+      // Define the validator vote account (you may want to make this configurable)
+      const validatorVoteAccount = new PublicKey('5MrQ888HbPthezJu4kWg9bFfZg2FMLtQWzixQgNNX48B');
+
+      // Amount to stake (for this example, we'll stake all the balance in the user vault)
       const amountToStake = new BN(userData.balance.toString());
 
-      let blockhash = (await connection.getLatestBlockhash('finalized')).blockhash;
-
-      const tx = await program.methods.stakesol(amountToStake)
+      let tx = await program.methods.stakesol(amountToStake)
         .accounts({
           user: publicKey,
           creator: creatorPubkey,
           userVault: userVaultPDA,
           creatorVault: creatorVaultPDA,
-          validatorVote: new PublicKey('5MrQ888HbPthezJu4kWg9bFfZg2FMLtQWzixQgNNX48B'),
-          stakeAccount: anchor.web3.Keypair.generate().publicKey,
+          validatorVote: validatorVoteAccount,
+          stakeAccount: stakeAccount.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           stakeProgram: StakeProgram.programId,
-          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
           stakeHistory: anchor.web3.SYSVAR_STAKE_HISTORY_PUBKEY,
           stakeConfig: new PublicKey('StakeConfig11111111111111111111111111111111'),
         })
+        .signers([stakeAccount])
+        .preInstructions([
+          anchor.web3.SystemProgram.createAccount({
+            fromPubkey: publicKey,
+            newAccountPubkey: stakeAccount.publicKey,
+            lamports: await connection.getMinimumBalanceForRentExemption(StakeProgram.space),
+            space: StakeProgram.space,
+            programId: StakeProgram.programId,
+          }),
+        ])
         .transaction();
 
+      // Get the latest blockhash
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
       tx.recentBlockhash = blockhash;
       tx.feePayer = publicKey;
 
@@ -528,11 +544,16 @@ export default function DashboardFeature() {
       const signedTx = await window.solana.signTransaction(tx);
 
       // Send and confirm the transaction
-      const signature = await connection.sendTransaction(tx, [signedTx]);
+      const signature = await connection.sendRawTransaction(signedTx.serialize());
+      await connection.confirmTransaction({
+        signature,
+        blockhash,
+        lastValidBlockHeight
+      });
 
       console.log('SOL staked successfully');
       console.log('Transaction signature:', signature);
-      alert(`SOL staked successfully!\nTransaction signature: ${signature}`);
+      alert(`SOL staked successfully!\nTransaction signature: ${signature}\nStake Account: ${stakeAccount.publicKey.toBase58()}`);
       
       // Refresh user data after staking
       await fetchUserData();
