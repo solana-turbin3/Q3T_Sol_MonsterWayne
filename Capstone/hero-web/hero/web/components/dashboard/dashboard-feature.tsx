@@ -330,7 +330,6 @@ export default function DashboardFeature() {
           stakeHistory: anchor.web3.SYSVAR_STAKE_HISTORY_PUBKEY,
           stakeConfig: new PublicKey('StakeConfig11111111111111111111111111111111'),
         })
-        .signers([stakeAccount])
         .preInstructions([
           anchor.web3.SystemProgram.createAccount({
             fromPubkey: publicKey,
@@ -347,11 +346,18 @@ export default function DashboardFeature() {
       tx.recentBlockhash = blockhash;
       tx.feePayer = publicKey;
 
+      // Partially sign the transaction with the new stake account
+      tx.partialSign(stakeAccount);
+
       // Sign the transaction with the user's wallet
       const signedTx = await window.solana.signTransaction(tx);
 
       // Send and confirm the transaction
-      const signature = await connection.sendRawTransaction(signedTx.serialize());
+      const signature = await connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: true,
+        preflightCommitment: 'confirmed'
+      });
+
       await connection.confirmTransaction({
         signature,
         blockhash,
