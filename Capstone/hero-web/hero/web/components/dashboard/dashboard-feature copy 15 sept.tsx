@@ -32,7 +32,6 @@ export default function DashboardFeature() {
     console.log('Getting program');
     const provider = new anchor.AnchorProvider(
       connection,
-      
       window.solana,
       { preflightCommitment: 'processed' }
     );
@@ -296,8 +295,7 @@ export default function DashboardFeature() {
     }
 
     try {
-      //const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
-      const connection = new Connection('http://localhost:8899', 'confirmed');
+      const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
       const program = getProgram();
       const amountLamports = parseFloat(stakeAmount) * LAMPORTS_PER_SOL;
       const creatorPublicKey = new PublicKey(userData.creator);
@@ -317,20 +315,42 @@ export default function DashboardFeature() {
         program.programId
       );
 
-      // 1. Create and initialize the stake account with custom authorities
+      // Create and initialize the stake account with custom authorities
       const rentExemptAmount = await connection.getMinimumBalanceForRentExemption(StakeProgram.space);
       const totalLamports = rentExemptAmount + amountLamports;
 
       const createStakeAccountIx = StakeProgram.createAccount({
         fromPubkey: publicKey,
         stakePubkey: stakeAccount.publicKey,
-        authorized: new Authorized(userVaultPDA, userVaultPDA), // Set user_vault PDA as both staker and withdrawer
-        lockup: new Lockup(0, 0, userVaultPDA), // Optional lockup custodian
+        authorized: new Authorized(userVaultPDA, userVaultPDA),
+        lockup: new Lockup(0, 0, userVaultPDA),
         lamports: totalLamports,
       });
 
-      // 2. Create the instruction to call your program's `stakesol` method
-      const stakeSolIx = await program.methods
+      const transaction = new Transaction().add(createStakeAccountIx);
+
+      transaction.feePayer = publicKey;
+      const { blockhash } = await connection.getLatestBlockhash('confirmed');
+      transaction.recentBlockhash = blockhash;
+
+      // Sign the transaction
+      transaction.partialSign(stakeAccount);
+
+      // Send to wallet for final signing
+      const signedTx = await window.solana.signTransaction(transaction);
+
+      // Send the transaction
+      const signature = await connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: false,
+      });
+      await connection.confirmTransaction(signature, 'confirmed');
+
+      console.log('Stake account created and initialized on Devnet');
+      console.log('Stake Account Public Key:', stakeAccount.publicKey.toBase58());
+      setStakeAccountPubkey(stakeAccount.publicKey.toBase58());
+
+      // Call your program on Devnet
+      await program.methods
         .stakesol(new anchor.BN(amountLamports))
         .accounts({
           user: publicKey,
@@ -346,30 +366,10 @@ export default function DashboardFeature() {
           stakeHistory: anchor.web3.SYSVAR_STAKE_HISTORY_PUBKEY,
           stakeConfig: new PublicKey('StakeConfig11111111111111111111111111111111'),
         })
-        .instruction(); // Get the instruction without sending
+        //.signers([stakeAccount])
+        .rpc();
 
-      // 3. Add both instructions to a single transaction
-      const transaction = new Transaction().add(
-        createStakeAccountIx,
-        stakeSolIx
-      );
-
-      transaction.feePayer = publicKey;
-      const { blockhash } = await connection.getLatestBlockhash('confirmed');
-      transaction.recentBlockhash = blockhash;
-
-      // 4. Partially sign the transaction with the stakeAccount keypair
-      transaction.partialSign(stakeAccount);
-
-      // 5. Send to wallet for final signing and submission
-      const signedTx = await window.solana.signTransaction(transaction);
-      const signature = await connection.sendRawTransaction(signedTx.serialize(), {
-        skipPreflight: false,
-      });
-      await connection.confirmTransaction(signature, 'confirmed');
-
-      console.log('Stake account created and SOL staked successfully on Devnet');
-      console.log('Stake Account Public Key:', stakeAccount.publicKey.toBase58());
+      console.log('SOL staked successfully on Devnet');
       alert(`SOL staked successfully on Devnet!\nStake Account: ${stakeAccount.publicKey.toBase58()}`);
 
       // Fetch and display the updated user vault data
