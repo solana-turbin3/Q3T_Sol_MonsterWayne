@@ -18,7 +18,7 @@ pub struct InitCreator<'info> {
 }
 
 impl<'info> InitCreator<'info> {
-    pub fn init_creator(&mut self, name: String, bumps: &InitCreatorBumps) -> Result<()> {
+    pub fn initcreator(&mut self, name: String, bumps: &InitCreatorBumps) -> Result<()> {
 
         self.creator_vault.set_inner(CreatorVault {
             creator: self.creator.key(),

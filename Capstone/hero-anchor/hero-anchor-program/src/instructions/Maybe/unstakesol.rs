@@ -38,7 +38,7 @@ pub struct UnstakeSol<'info> {
 }
 
 impl<'info> UnstakeSol<'info> {
-    pub fn unstake_sol(&mut self) -> Result<()> {
+    pub fn unstakesol(&mut self) -> Result<()> {
         // 1. Deactivate the stake account
         let ix = stake_instruction::deactivate_stake(
             self.stake_account.key,

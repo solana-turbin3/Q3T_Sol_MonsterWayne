@@ -1,9 +1,17 @@
 export const hero = {
   "version": "0.1.0",
   "name": "hero_anchor_program",
+  "address": "7JDguW1LTudWAhND2YWrrxjrjS3cSBNjrtdCx7nmk1jE",
+  "metadata": {
+    "name": "hero_anchor_program",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
   "instructions": [
     {
-      "name": "deposit",
+      "name": "calculateandsplitrewards",
+      "discriminator": [92, 7, 100, 45, 86, 201, 26, 83],
       "accounts": [
         {
           "name": "user",
@@ -16,19 +24,162 @@ export const hero = {
           "isSigner": false
         },
         {
-          "name": "creatorVault",
+          "name": "stake_account",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userVault",
+          "name": "reward_stake_account",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "systemProgram",
+          "name": "user_vault",
+          "isMut": true,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [117, 115, 101, 114, 95, 118, 97, 117, 108, 116]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "creator_vault.name",
+                "account": "CreatorVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator_vault",
+          "isMut": true,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [99, 114, 101, 97, 116, 111, 114, 95, 118, 97, 117, 108, 116]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
+        },
+        {
+          "name": "stake_authority",
+          "isMut": false,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [117, 115, 101, 114, 95, 118, 97, 117, 108, 116]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "creator_vault.name",
+                "account": "CreatorVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "isMut": false,
+          "isSigner": false,
+          "docs": ["System and Stake Programs"],
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "stake_program",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "clock",
+          "isMut": false,
+          "isSigner": false,
+          "docs": ["Sysvars"],
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        },
+        {
+          "name": "stake_history",
+          "isMut": false,
+          "isSigner": false,
+          "address": "SysvarStakeHistory1111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "deposit",
+      "discriminator": [242, 35, 198, 137, 82, 225, 242, 182],
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "creator",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "creator_vault",
+          "isMut": true,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [99, 114, 101, 97, 116, 111, 114, 95, 118, 97, 117, 108, 116]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_vault",
+          "isMut": true,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [117, 115, 101, 114, 95, 118, 97, 117, 108, 116]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "creator_vault.name",
+                "account": "CreatorVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "isMut": false,
+          "isSigner": false,
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -40,6 +191,7 @@ export const hero = {
     },
     {
       "name": "initcreator",
+      "discriminator": [99, 182, 247, 43, 35, 90, 13, 159],
       "accounts": [
         {
           "name": "creator",
@@ -47,14 +199,27 @@ export const hero = {
           "isSigner": true
         },
         {
-          "name": "creatorVault",
+          "name": "creator_vault",
           "isMut": true,
-          "isSigner": false
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [99, 114, 101, 97, 116, 111, 114, 95, 118, 97, 117, 108, 116]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -66,6 +231,7 @@ export const hero = {
     },
     {
       "name": "inituser",
+      "discriminator": [174, 160, 28, 28, 126, 89, 81, 236],
       "accounts": [
         {
           "name": "user",
@@ -78,19 +244,49 @@ export const hero = {
           "isSigner": false
         },
         {
-          "name": "creatorVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
+          "name": "creator_vault",
           "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [99, 114, 101, 97, 116, 111, 114, 95, 118, 97, 117, 108, 116]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_vault",
+          "isMut": true,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [117, 115, 101, 114, 95, 118, 97, 117, 108, 116]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "creator_vault.name",
+                "account": "CreatorVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "isMut": false,
+          "isSigner": false,
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -102,6 +298,7 @@ export const hero = {
     },
     {
       "name": "stakesol",
+      "discriminator": [182, 45, 21, 254, 188, 82, 158, 209],
       "accounts": [
         {
           "name": "user",
@@ -110,56 +307,90 @@ export const hero = {
         },
         {
           "name": "creator",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "creatorVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "validatorVote",
           "isMut": false,
           "isSigner": false
         },
         {
-          "name": "stakeAccount",
+          "name": "user_vault",
+          "isMut": true,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [117, 115, 101, 114, 95, 118, 97, 117, 108, 116]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "creator_vault.name",
+                "account": "CreatorVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator_vault",
+          "isMut": true,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [99, 114, 101, 97, 116, 111, 114, 95, 118, 97, 117, 108, 116]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
+        },
+        {
+          "name": "validator_vote",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stake_account",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "address": "11111111111111111111111111111111"
         },
         {
-          "name": "stakeProgram",
+          "name": "stake_program",
           "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "address": "Stake11111111111111111111111111111111111111"
         },
         {
           "name": "rent",
           "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "address": "SysvarRent111111111111111111111111111111111"
         },
         {
           "name": "clock",
           "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "address": "SysvarC1ock11111111111111111111111111111111"
         },
         {
-          "name": "stakeHistory",
+          "name": "stake_history",
           "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "address": "SysvarStakeHistory1111111111111111111111111"
         },
         {
-          "name": "stakeConfig",
+          "name": "stake_config",
           "isMut": false,
           "isSigner": false
         }
@@ -172,7 +403,8 @@ export const hero = {
       ]
     },
     {
-      "name": "stakesolwow",
+      "name": "withdrawrewards",
+      "discriminator": [51, 154, 39, 43, 155, 96, 250, 147],
       "accounts": [
         {
           "name": "user",
@@ -185,105 +417,82 @@ export const hero = {
           "isSigner": false
         },
         {
-          "name": "userVault",
+          "name": "user_vault",
+          "isMut": true,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [117, 115, 101, 114, 95, 118, 97, 117, 108, 116]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "creator_vault.name",
+                "account": "CreatorVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator_vault",
+          "isMut": true,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [99, 114, 101, 97, 116, 111, 114, 95, 118, 97, 117, 108, 116]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
+        },
+        {
+          "name": "reward_stake_account",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "creatorVault",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "validatorVote",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "stakeAccount",
+          "name": "destination_account",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "systemProgram",
+          "name": "stake_authority",
           "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [117, 115, 101, 114, 95, 118, 97, 117, 108, 116]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "creator_vault.name",
+                "account": "CreatorVault"
+              }
+            ]
+          }
         },
         {
-          "name": "stakeProgram",
+          "name": "system_program",
           "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clock",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "stakeHistory",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "stakeConfig",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "amount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "unstakeSol",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "creator",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "userVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "creatorVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "stakeAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "stakeProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clock",
-          "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "docs": ["System Program"],
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -292,6 +501,7 @@ export const hero = {
   "accounts": [
     {
       "name": "CreatorVault",
+      "discriminator": [200, 135, 38, 98, 35, 236, 238, 12],
       "type": {
         "kind": "struct",
         "fields": [
@@ -304,7 +514,7 @@ export const hero = {
             "type": "string"
           },
           {
-            "name": "total_subscribers",
+            "name": "total_subcribers",
             "type": "u64"
           },
           {
@@ -320,11 +530,12 @@ export const hero = {
     },
     {
       "name": "UserVault",
+      "discriminator": [23, 76, 96, 159, 210, 10, 5, 22],
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "pda_owner",
+            "name": "user",
             "type": "publicKey"
           },
           {
@@ -344,404 +555,56 @@ export const hero = {
             "type": "publicKey"
           },
           {
-            "name": "reward_amount",
+            "name": "stake_account_count",
             "type": "u64"
           },
           {
-            "name": "last_epoch_time",
+            "name": "reward_stake_account",
+            "type": "publicKey"
+          },
+          {
+            "name": "stake_at",
             "type": "i64"
+          },
+          {
+            "name": "accumulated_rewards",
+            "type": "u64"
           },
           {
             "name": "bump",
             "type": "u8"
-          },
-          {
-            "name": "is_stake_active",
-            "type": "bool"
-          },
-          {
-            "name": "last_reward_claim_time",
-            "type": "i64"
           }
         ]
       }
     }
   ],
-  "metadata": {
-    "address": "3V5Powcaj74ieaZPnTg1wE1mPY5C9ZQJcFyUAKkWrU4U"
-  }
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NoRewardsAvailable",
+      "msg": "No rewards available to withdraw."
+    },
+    {
+      "code": 6001,
+      "name": "CalculationError",
+      "msg": "Calculation error."
+    },
+    {
+      "code": 6002,
+      "name": "InstructionError",
+      "msg": "Instruction error."
+    },
+    {
+      "code": 6003,
+      "name": "InvalidStakeState",
+      "msg": "Invalid stake state."
+    },
+    {
+      "code": 6004,
+      "name": "StakeAccountNotDeactivated",
+      "msg": "Stake account not deactivated."
+    }
+  ]
 };
 
-export const idl = {
-  "version": "0.1.0",
-  "name": "hero_anchor_program",
-  "instructions": [
-    {
-      "name": "deposit",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "creator",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "creatorVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "amount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "initcreator",
-      "accounts": [
-        {
-          "name": "creator",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "creatorVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "name",
-          "type": "string"
-        }
-      ]
-    },
-    {
-      "name": "inituser",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "creator",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "creatorVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "creator",
-          "type": "publicKey"
-        }
-      ]
-    },
-    {
-      "name": "stakesol",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "creator",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "creatorVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "validatorVote",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "stakeAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "stakeProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clock",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "stakeHistory",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "stakeConfig",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "amount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "stakesolwow",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "creator",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "userVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "creatorVault",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "validatorVote",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "stakeAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "stakeProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clock",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "stakeHistory",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "stakeConfig",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "amount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "unstakeSol",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "creator",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "userVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "creatorVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "stakeAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "stakeProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clock",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    }
-  ],
-  "accounts": [
-    {
-      "name": "CreatorVault",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "creator",
-            "type": "publicKey"
-          },
-          {
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "name": "total_subscribers",
-            "type": "u64"
-          },
-          {
-            "name": "balance",
-            "type": "u64"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "UserVault",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "pda_owner",
-            "type": "publicKey"
-          },
-          {
-            "name": "creator",
-            "type": "publicKey"
-          },
-          {
-            "name": "balance",
-            "type": "u64"
-          },
-          {
-            "name": "staked_amount",
-            "type": "u64"
-          },
-          {
-            "name": "stake_account",
-            "type": "publicKey"
-          },
-          {
-            "name": "reward_amount",
-            "type": "u64"
-          },
-          {
-            "name": "last_epoch_time",
-            "type": "i64"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          },
-          {
-            "name": "is_stake_active",
-            "type": "bool"
-          },
-          {
-            "name": "last_reward_claim_time",
-            "type": "i64"
-          }
-        ]
-      }
-    }
-  ],
-  "metadata": {
-    "address": "3V5Powcaj74ieaZPnTg1wE1mPY5C9ZQJcFyUAKkWrU4U"
-  }
-};
+export const idl = hero;

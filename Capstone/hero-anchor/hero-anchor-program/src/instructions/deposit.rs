@@ -26,7 +26,7 @@ pub struct Deposit<'info> {
 }
 
 impl<'info> Deposit<'info> {
-    pub fn deposit_sol(&mut self, amount: u64) -> Result<()> {
+    pub fn deposit(&mut self, amount: u64) -> Result<()> {
 
         //Transfer SOL from user to PDA
         let accounts = Transfer {

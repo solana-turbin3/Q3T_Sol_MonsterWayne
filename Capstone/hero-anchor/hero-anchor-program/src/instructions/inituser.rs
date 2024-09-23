@@ -10,9 +10,9 @@ pub struct InitUser<'info> {
     pub creator: SystemAccount<'info>,
 
     #[account(
-        mut,
+        
         seeds = [b"creator_vault", creator.key().as_ref()],
-        bump
+        bump = creator_vault.bump
     )]
     pub creator_vault: Account<'info, CreatorVault>,
 
@@ -29,20 +29,19 @@ pub struct InitUser<'info> {
 }
 
 impl<'info> InitUser<'info> {
-    pub fn init_user_vault(&mut self, creator: Pubkey, bumps: &InitUserBumps) -> Result<()> {
+    pub fn inituser(&mut self, creator: Pubkey, bumps: &InitUserBumps) -> Result<()> {
 
         self.user_vault.set_inner(UserVault {
-            pda_owner: self.user.key(),
+            user: self.user.key(),
             creator: creator.key(),
             balance: 0,
             staked_amount: 0,
             stake_account: Pubkey::default(),
-            reward_amount: 0,
-            last_epoch_time: 0,
-            //seed: seed,
+            stake_at: 0,
+            reward_stake_account: Pubkey::default(),
+            accumulated_rewards: 0,
             bump: bumps.user_vault,
-            is_stake_active: false,
-            last_reward_claim_time: 0,
+            stake_account_count: 0,
         });
 
         Ok(())

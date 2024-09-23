@@ -7,13 +7,15 @@ use anchor_lang::prelude::*;
 //declare_id!("FyNFEUPNAmVfvjXdTriorh71vsC1jdMi2HxkHujnWWUM");
 //declare_id!("DEXA1SPRbDf4tugo6TeePTqUnN9QNSiz1XRRdaMosWPa");
 
-declare_id!("6DpKqeB8ehecwyhZxoUKqizxpWcM1fBvWCr8y6dkhnWL");
+declare_id!("7JDguW1LTudWAhND2YWrrxjrjS3cSBNjrtdCx7nmk1jE");
 
 
 
 
 mod instructions;
 mod state;
+pub mod error;
+
 
 
 use instructions::*;
@@ -26,17 +28,17 @@ pub mod hero_anchor_program {
     use super::*;
 
      pub fn initcreator(ctx: Context<InitCreator>, name: String) -> Result<()> {
-        ctx.accounts.init_creator(name, &ctx.bumps)
+        ctx.accounts.initcreator(name, &ctx.bumps)
     }
 
     pub fn inituser(ctx: Context<InitUser>, creator: Pubkey) -> Result<()> {
-        ctx.accounts.init_user_vault( creator, &ctx.bumps)
+        ctx.accounts.inituser( creator, &ctx.bumps)
 
     }
 
    
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
-        ctx.accounts.deposit_sol(amount)
+        ctx.accounts.deposit(amount)
       
     }
 
@@ -46,34 +48,54 @@ pub mod hero_anchor_program {
     //     Ok(())
     // }
 
-    pub fn withdrawandcloseuservault(ctx: Context<WithdrawAndCloseUser>) -> Result<()> {
-        ctx.accounts.withdrawandcloseuservault()
-    }
+    // pub fn withdrawandcloseuservault(ctx: Context<WithdrawAndCloseUser>) -> Result<()> {
+    //     ctx.accounts.withdrawandcloseuservault()
+    // }
 
 
-    pub fn withdrawandclosecreatorvault(ctx: Context<WithdrawAndCloseCreator>) -> Result<()> {
-        ctx.accounts.withdrawandclosecreatorvault()
-    }
+    // pub fn withdrawandclosecreatorvault(ctx: Context<WithdrawAndCloseCreator>) -> Result<()> {
+    //     ctx.accounts.withdrawandclosecreatorvault()
+    // }
 
     // pub fn update_stake_account(ctx: Context<UpdateUserStakeAccount>, stake_account: Pubkey, amount: u64) -> Result<()> {
     //     ctx.accounts.update_stake_account(stake_account, amount)
     // }
 
-    pub fn stake_sol(ctx: Context<StakeSol>, amount: u64) -> Result<()> {
-        ctx.accounts.stake_sol(amount)
+    pub fn stakesol(ctx: Context<StakeSol>, amount: u64) -> Result<()> {
+        ctx.accounts.stakesol(amount)
     }
+
+    pub fn calculateandsplitrewards(ctx: Context<CalculateAndSplitRewards>) -> Result<()> {
+        ctx.accounts.calculateandsplitrewards()
+    }
+
+    pub fn withdrawrewards(ctx: Context<WithdrawRewards>) -> Result<()> {
+        ctx.accounts.withdrawrewards()
+    }
+
+    // pub fn delegatestake(ctx: Context<DelegateStake>) -> Result<()> {
+    //     ctx.accounts.delegatestake()
+    // }
+
+    // pub fn deactivatestake(ctx: Context<DeactivateStake>) -> Result<()> {
+    //     ctx.accounts.deactivatestake()
+    // }
 
 //    pub fn create_stake_delegate(ctx: Context<CreateStakeDelegate>, amount: u64) -> Result<()> {
 //         ctx.accounts.create_stake_delegate(amount)
 //     }
 
-    pub fn unstake_sol(ctx: Context<UnstakeSol>) -> Result<()> {
-        ctx.accounts.unstake_sol()
-    }
+    // pub fn unstakesol(ctx: Context<UnstakeSol>) -> Result<()> {
+    //     ctx.accounts.unstakesol()
+    // }
 
-    pub fn withdraw_unstaked_sol(ctx: Context<WithdrawUnstakedSol>) -> Result<()> {
-        ctx.accounts.withdraw_unstaked_sol()
-    }
+    // pub fn withdraw_unstaked_sol(ctx: Context<WithdrawUnstakedSol>) -> Result<()> {
+    //     ctx.accounts.withdraw_unstaked_sol()
+    // }
+
+    // pub fn stakesolwow(ctx: Context<StakeSolWow>, amount: u64) -> Result<()> {
+    //     ctx.accounts.stakesolwow(amount)
+    // }
         
 }
 
