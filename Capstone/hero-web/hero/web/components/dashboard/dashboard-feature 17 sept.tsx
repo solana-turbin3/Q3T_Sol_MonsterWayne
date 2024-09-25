@@ -25,6 +25,8 @@ export default function DashboardFeature() {
   const [initAmount, setInitAmount] = useState<string>('');
   const [userSeed, setUserSeed] = useState<string>('');
   const [stakeAmount, setStakeAmount] = useState<string>('');
+  const [updatedUserVaultData, setUpdatedUserVaultData] = useState<any>(null);
+  const [stakeAccountData, setStakeAccountData] = useState<any>(null);
 
   const getProgram = () => {
     console.log('Getting program');
@@ -293,7 +295,8 @@ export default function DashboardFeature() {
     }
 
     try {
-      const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+      //const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+      const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
       const program = getProgram();
       const amountLamports = parseFloat(stakeAmount) * LAMPORTS_PER_SOL;
       const creatorPublicKey = new PublicKey(userData.creator);
@@ -313,47 +316,27 @@ export default function DashboardFeature() {
         program.programId
       );
 
-      // Create and initialize the stake account with custom authorities
+      // 1. Create and initialize the stake account with custom authorities
       const rentExemptAmount = await connection.getMinimumBalanceForRentExemption(StakeProgram.space);
       const totalLamports = rentExemptAmount + amountLamports;
 
       const createStakeAccountIx = StakeProgram.createAccount({
         fromPubkey: publicKey,
         stakePubkey: stakeAccount.publicKey,
-        authorized: new Authorized(userVaultPDA, userVaultPDA),
-        lockup: new Lockup(0, 0, userVaultPDA),
+        authorized: new Authorized(userVaultPDA, userVaultPDA), // Set user_vault PDA as both staker and withdrawer
+        lockup: new Lockup(0, 0, userVaultPDA), // Optional lockup custodian
         lamports: totalLamports,
       });
 
-      const transaction = new Transaction().add(createStakeAccountIx);
-
-      transaction.feePayer = publicKey;
-      const { blockhash } = await connection.getLatestBlockhash('confirmed');
-      transaction.recentBlockhash = blockhash;
-
-      // Sign the transaction
-      transaction.partialSign(stakeAccount);
-
-      // Send to wallet for final signing
-      const signedTx = await window.solana.signTransaction(transaction);
-
-      // Send the transaction
-      const signature = await connection.sendRawTransaction(signedTx.serialize(), {
-        skipPreflight: false,
-      });
-      await connection.confirmTransaction(signature, 'confirmed');
-
-      console.log('Stake account created and initialized on Devnet');
-
-      // Call your program on Devnet
-      await program.methods
+      // 2. Create the instruction to call your program's `stakesol` method
+      const stakeSolIx = await program.methods
         .stakesol(new anchor.BN(amountLamports))
         .accounts({
           user: publicKey,
           creator: creatorPublicKey,
           userVault: userVaultPDA,
           creatorVault: creatorVaultPDA,
-          validatorVote: new PublicKey('Devnet_Validator_Vote_Address'),
+          validatorVote: new PublicKey('5MrQ888HbPthezJu4kWg9bFfZg2FMLtQWzixQgNNX48B'),
           stakeAccount: stakeAccount.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           stakeProgram: StakeProgram.programId,
@@ -362,11 +345,45 @@ export default function DashboardFeature() {
           stakeHistory: anchor.web3.SYSVAR_STAKE_HISTORY_PUBKEY,
           stakeConfig: new PublicKey('StakeConfig11111111111111111111111111111111'),
         })
-        .signers([stakeAccount])
-        .rpc();
+        .instruction(); // Get the instruction without sending
 
-      console.log('SOL staked successfully on Devnet');
+      // 3. Add both instructions to a single transaction
+      const transaction = new Transaction().add(
+        createStakeAccountIx,
+        stakeSolIx
+      );
+
+      transaction.feePayer = publicKey;
+      const { blockhash } = await connection.getLatestBlockhash('confirmed');
+      transaction.recentBlockhash = blockhash;
+
+      // 4. Partially sign the transaction with the stakeAccount keypair
+      transaction.partialSign(stakeAccount);
+
+      // 5. Send to wallet for final signing and submission
+      const signedTx = await window.solana.signTransaction(transaction);
+      const signature = await connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: false,
+      });
+      await connection.confirmTransaction(signature, 'confirmed');
+
+      console.log('Stake account created and SOL staked successfully on Devnet');
+      console.log('Stake Account Public Key:', stakeAccount.publicKey.toBase58());
       alert(`SOL staked successfully on Devnet!\nStake Account: ${stakeAccount.publicKey.toBase58()}`);
+
+      // Fetch and display the updated user vault data
+      const updatedUserVault = await program.account.userVault.fetch(userVaultPDA);
+      console.log('Updated User Vault Data:', updatedUserVault);
+      setUpdatedUserVaultData(updatedUserVault);
+
+      // Fetch and display the stake account data
+      const stakeAccountInfo = await connection.getParsedAccountInfo(stakeAccount.publicKey);
+      if (stakeAccountInfo.value) {
+        console.log('Stake Account Data:', stakeAccountInfo.value.data);
+        setStakeAccountData(stakeAccountInfo.value.data);
+      } else {
+        console.log('Failed to fetch stake account data.');
+      }
 
       await fetchUserData();
     } catch (error) {
@@ -457,6 +474,123 @@ export default function DashboardFeature() {
       } else {
         alert('Failed to withdraw and close user vault: Unknown error');
       }
+    }
+  };
+
+  const delegateStakeAccount = async () => {
+    if (!publicKey || !userData || !stakeAccountPubkey) {
+      console.log('Missing public key, user data, or stake account public key');
+      return;
+    }
+
+    try {
+      const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+      const program = getProgram();
+      const creatorPublicKey = new PublicKey(userData.creator);
+      const stakeAccountPubkeyObj = new PublicKey(stakeAccountPubkey);
+
+      // Derive the PDAs
+      const [creatorVaultPDA] = await PublicKey.findProgramAddress(
+        [Buffer.from('creator_vault'), creatorPublicKey.toBuffer()],
+        program.programId
+      );
+
+      const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
+      const creatorName = creatorVaultAccount.name;
+
+      const [userVaultPDA] = await PublicKey.findProgramAddress(
+        [Buffer.from('user_vault'), publicKey.toBuffer(), Buffer.from(creatorName)],
+        program.programId
+      );
+
+      // Call the delegate_stake instruction
+      await program.methods
+        .delegateStake(creatorName)
+        .accounts({
+          user: publicKey,
+          stakeAccount: stakeAccountPubkeyObj,
+          validatorVote: new PublicKey('FPLsTTUKE4uvbjmB9XcRHtEcMg5HY9siyEm447vFSu8m'),
+          userVault: userVaultPDA,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+          stakeHistory: anchor.web3.SYSVAR_STAKE_HISTORY_PUBKEY,
+          stakeConfig: new PublicKey('StakeConfig11111111111111111111111111111111'),
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+
+      console.log('Stake account delegated successfully.');
+      alert('Stake account delegated successfully.');
+
+      // Fetch and display the stake account data
+      const stakeAccountInfo = await connection.getParsedAccountInfo(stakeAccountPubkeyObj);
+      if (stakeAccountInfo.value) {
+        console.log('Stake Account Data:', stakeAccountInfo.value.data);
+        setStakeAccountData(stakeAccountInfo.value.data);
+      } else {
+        console.log('Failed to fetch stake account data.');
+      }
+    } catch (error) {
+      console.error('Error delegating stake account:', error);
+      alert(`Failed to delegate stake account: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const deactivateStakeAccount = async () => {
+    if (!publicKey || !userData || !stakeAccountPubkey) {
+      console.log('Missing public key, user data, or stake account public key');
+      return;
+    }
+
+    try {
+      const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+      const program = getProgram();
+      const creatorPublicKey = new PublicKey(userData.creator);
+      const stakeAccountPubkeyObj = new PublicKey(stakeAccountPubkey);
+
+      // Derive the PDAs
+      const [creatorVaultPDA] = await PublicKey.findProgramAddress(
+        [Buffer.from('creator_vault'), creatorPublicKey.toBuffer()],
+        program.programId
+      );
+
+      const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
+      const creatorName = creatorVaultAccount.name;
+
+      const [userVaultPDA] = await PublicKey.findProgramAddress(
+        [Buffer.from('user_vault'), publicKey.toBuffer(), Buffer.from(creatorName)],
+        program.programId
+      );
+
+      // Call the deactivate_stake instruction
+      await program.methods
+        .deactivateStake(creatorName)
+        .accounts({
+          user: publicKey,
+          stakeAccount: stakeAccountPubkeyObj,
+          userVault: userVaultPDA,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+          stakeHistory: anchor.web3.SYSVAR_STAKE_HISTORY_PUBKEY,
+          stakeConfig: new PublicKey('StakeConfig11111111111111111111111111111111'),
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+
+      console.log('Stake account deactivated successfully.');
+      alert('Stake account deactivated successfully.');
+
+      // Fetch and display the stake account data
+      const stakeAccountInfo = await connection.getParsedAccountInfo(stakeAccountPubkeyObj);
+      if (stakeAccountInfo.value) {
+        console.log('Stake Account Data:', stakeAccountInfo.value.data);
+        setStakeAccountData(stakeAccountInfo.value.data);
+      } else {
+        console.log('Failed to fetch stake account data.');
+      }
+    } catch (error) {
+      console.error('Error deactivating stake account:', error);
+      alert(`Failed to deactivate stake account: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -608,6 +742,34 @@ export default function DashboardFeature() {
                   Creator: {creatorPubkey}
                 </div>
               )}
+              {stakeAccountPubkey && (
+                <div>
+                  <button onClick={delegateStakeAccount}>
+                    Delegate Stake
+                  </button>
+                  <button onClick={deactivateStakeAccount}>
+                    Deactivate Stake
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          {stakeAccountPubkey && (
+            <div>
+              <h3>Stake Account Public Key:</h3>
+              <p>{stakeAccountPubkey}</p>
+            </div>
+          )}
+          {updatedUserVaultData && (
+            <div>
+              <h3>Updated User Vault Data:</h3>
+              <pre>{JSON.stringify(updatedUserVaultData, null, 2)}</pre>
+            </div>
+          )}
+          {stakeAccountData && (
+            <div>
+              <h3>Stake Account Data:</h3>
+              <pre>{JSON.stringify(stakeAccountData, null, 2)}</pre>
             </div>
           )}
         </div>

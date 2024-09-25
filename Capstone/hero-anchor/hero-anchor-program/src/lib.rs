@@ -7,7 +7,7 @@ use anchor_lang::prelude::*;
 //declare_id!("FyNFEUPNAmVfvjXdTriorh71vsC1jdMi2HxkHujnWWUM");
 //declare_id!("DEXA1SPRbDf4tugo6TeePTqUnN9QNSiz1XRRdaMosWPa");
 
-declare_id!("7JDguW1LTudWAhND2YWrrxjrjS3cSBNjrtdCx7nmk1jE");
+declare_id!("8it9v1wRMskenGKUnq7Euh85tWtUwvWco6wUy7uyZbSS");
 
 
 
@@ -27,8 +27,8 @@ pub mod hero_anchor_program {
 
     use super::*;
 
-     pub fn initcreator(ctx: Context<InitCreator>, name: String) -> Result<()> {
-        ctx.accounts.initcreator(name, &ctx.bumps)
+     pub fn initcreator(ctx: Context<InitCreator>, name: String, validator: Pubkey) -> Result<()> {
+        ctx.accounts.initcreator(name, validator, &ctx.bumps)
     }
 
     pub fn inituser(ctx: Context<InitUser>, creator: Pubkey) -> Result<()> {
@@ -65,12 +65,24 @@ pub mod hero_anchor_program {
         ctx.accounts.stakesol(amount)
     }
 
+    pub fn unstakesol(ctx: Context<UnstakeSol>) -> Result<()> {
+        ctx.accounts.unstakesol()
+    }
+
     pub fn calculateandsplitrewards(ctx: Context<CalculateAndSplitRewards>) -> Result<()> {
         ctx.accounts.calculateandsplitrewards()
     }
 
     pub fn withdrawrewards(ctx: Context<WithdrawRewards>) -> Result<()> {
         ctx.accounts.withdrawrewards()
+    }
+
+    pub fn withdrawunstakedsol(ctx: Context<WithdrawUnstakedSol>) -> Result<()> {
+        ctx.accounts.withdraw_unstaked_sol()
+    }
+
+    pub fn updatevalidator(ctx: Context<UpdateValidator>, new_validator: Pubkey) -> Result<()> {
+        ctx.accounts.updatevalidator(new_validator)
     }
 
     // pub fn delegatestake(ctx: Context<DelegateStake>) -> Result<()> {

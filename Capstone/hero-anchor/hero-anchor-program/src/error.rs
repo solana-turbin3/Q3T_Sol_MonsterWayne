@@ -14,5 +14,12 @@ pub enum ErrorCode {
     InvalidStakeState,
     #[msg("Stake account not deactivated.")]
     StakeAccountNotDeactivated,
+    #[msg("Unclaimed rewards.")]
+    UnclaimedRewards,
+    #[msg("No funds to withdraw.")]
+    NoFundsToWithdraw,
+    #[msg("Stake account not initialized.")]
+    StakeAccountNotInitialized,
+
     // Add other error codes as needed
 }

@@ -42,6 +42,7 @@ impl<'info> InitUser<'info> {
             accumulated_rewards: 0,
             bump: bumps.user_vault,
             stake_account_count: 0,
+            unstake_request_epoch: 0,
         });
 
         Ok(())

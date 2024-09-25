@@ -18,6 +18,7 @@ pub struct UserVault {
     pub bump: u8,
    // pub is_stake_active: bool,
     //pub last_reward_claim_time: i64,
+    pub unstake_request_epoch: u64,
 }
 
 // impl UserVault {

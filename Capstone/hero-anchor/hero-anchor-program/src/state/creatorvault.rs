@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 #[derive(InitSpace)]
 pub struct CreatorVault {
     pub creator: Pubkey,
+    pub validator: Pubkey,
     #[max_len(10)]
     pub name: String,
    // #[max_len(5)]

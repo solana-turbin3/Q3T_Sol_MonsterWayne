@@ -8,9 +8,10 @@ import * as anchor from '@project-serum/anchor';
 import { idl } from '../solana/idl/hero_anchor_program';
 import { Idl } from '@project-serum/anchor';
 import { Address, AnchorProvider, BN, Program, Wallet } from "@coral-xyz/anchor";
+import { findAllStakeAccountsByAuth } from '@soceanfi/solana-stake-sdk';
 //import cron from 'node-cron';
 
-const PROGRAM_ID = new PublicKey('7JDguW1LTudWAhND2YWrrxjrjS3cSBNjrtdCx7nmk1jE');
+const PROGRAM_ID = new PublicKey('8it9v1wRMskenGKUnq7Euh85tWtUwvWco6wUy7uyZbSS');
 
 export default function DashboardFeature() {
   const { publicKey } = useWallet();
@@ -30,6 +31,9 @@ export default function DashboardFeature() {
   const [rewardsStakeAccountPubkey, setRewardsStakeAccountPubkey] = useState<string | null>(null);
   const [userVaultData, setUserVaultData] = useState<any>(null);
   const [stakeAccountPubkeys, setStakeAccountPubkeys] = useState<string[]>([]);
+  const [selectedValidator, setSelectedValidator] = useState<PublicKey | null>(null);
+  const [availableValidators, setAvailableValidators] = useState<PublicKey[]>([]);
+  const [creatorName, setCreatorName] = useState('');
 
   const getProgram = () => {
     console.log('Getting program');
@@ -58,49 +62,41 @@ export default function DashboardFeature() {
   };
 
   const initializeCreator = async () => {
-    console.log('Initializing creator');
-    if (!publicKey) {
-      console.log('No public key available');
+    if (!publicKey || !selectedValidator || !creatorName) {
+      alert('Please connect your wallet, select a validator, and enter a creator name.');
       return;
     }
     try {
       const program = getProgram();
-      console.log('Program obtained:', program);
-      console.log('Finding program address');
       const [creatorPDA] = PublicKey.findProgramAddressSync(
         [Buffer.from('creator_vault'), publicKey.toBuffer()],
         program.programId
       );
-      console.log('Creator PDA found:', creatorPDA.toBase58());
 
-      const creatorName = "monster";
+      // Log the arguments for debugging
+      console.log("Creator Name:", creatorName);
+      console.log("Selected Validator:", selectedValidator);
 
-      console.log('Calling initcreator method');
-      const tx = await program.methods
-        .initcreator(creatorName)
+      // Make sure selectedValidator is a PublicKey object
+      const validatorPubkey = new PublicKey(selectedValidator);
+
+      //const validatorPubkey = new PublicKey('5MrQ888HbPthezJu4kWg9bFfZg2FMLtQWzixQgNNX48B');
+
+      await program.methods
+        .initcreator(creatorName, validatorPubkey)
         .accounts({
           creator: publicKey,
           creatorVault: creatorPDA,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
         .rpc();
-      console.log('initcreator method called successfully');
-      console.log('Transaction signature:', tx);
-      console.log('Creator PDA public key:', creatorPDA.toBase58());
 
       setCreatorPDA(creatorPDA.toBase58());
-      console.log('Creator PDA set in state');
-      alert(`Creator initialized successfully!\nTransaction signature: ${tx}\nCreator PDA: ${creatorPDA.toBase58()}`);
-
-      // Fetch creator data after initialization
+      alert('Creator initialized successfully!');
       await fetchCreatorData();
     } catch (error) {
       console.error('Error initializing creator:', error);
-      if (error instanceof Error) {
-        alert(`Failed to initialize creator: ${error.message}`);
-      } else {
-        alert('Failed to initialize creator: Unknown error');
-      }
+      alert(`Failed to initialize creator: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -119,7 +115,7 @@ export default function DashboardFeature() {
       // Predefined creator public key (ensure this is correct)
       const creatorPublicKey = new PublicKey("tVZyEqNfxXvFz5TZaRvggfxAnqjHksZdCp9BRQnXs35");
 
-      // Fetch the creator vault to get the name
+      // Fetch the creator vault to get the name and selected validator
       const [creatorVaultPDA] = PublicKey.findProgramAddressSync(
         [Buffer.from('creator_vault'), creatorPublicKey.toBuffer()],
         program.programId
@@ -127,6 +123,7 @@ export default function DashboardFeature() {
       
       const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
       const creatorName = creatorVaultAccount.name;
+      const selectedValidator = creatorVaultAccount.validator;
       
       // Derive the user vault PDA
       const [userPDA] = PublicKey.findProgramAddressSync(
@@ -208,6 +205,12 @@ export default function DashboardFeature() {
         lamports: stakeLamports + rentExemptAmount,
       });
 
+      // Fetch the CreatorVault account data
+      //const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
+
+      // Use the validator public key from the CreatorVault account
+      const validatorPubkey = creatorVaultAccount.validator;
+
       // Instruction: stake SOL
       const stakeSolIx = await program.methods
         .stakesol(new BN(stakeLamports))
@@ -216,7 +219,7 @@ export default function DashboardFeature() {
           creator: creatorPublicKey,
           userVault: userPDA,
           creatorVault: creatorVaultPDA,
-          validatorVote: new PublicKey('5MrQ888HbPthezJu4kWg9bFfZg2FMLtQWzixQgNNX48B'), // Replace with actual validator public key
+          validatorVote: validatorPubkey, // Use the validator from the CreatorVault
           stakeAccount: stakeAccount,
           systemProgram: anchor.web3.SystemProgram.programId,
           stakeProgram: StakeProgram.programId,
@@ -331,7 +334,10 @@ const calculateAndSplitRewards = async () => {
         stakeAccount: stakeAccountPubkey,
         rewardStakeAccount: rewardStakeAccount.publicKey,
         userVault: userVaultPDA,
-        stakeAuthority: userVaultPDA, // The user vault PDA is the stake authority
+        stakeAuthority: {
+          staker: userVaultPDA,
+          withdrawer: userVaultPDA
+        },
         systemProgram: anchor.web3.SystemProgram.programId,
         stakeProgram: anchor.web3.StakeProgram.programId,
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
@@ -390,7 +396,10 @@ const withdrawRewards = async () => {
         userVault: userVaultPDA,
         rewardStakeAccount: rewardStakeAccountPubkey,
         destinationAccount: publicKey, // Rewards are sent to the user's main wallet
-        stakeAuthority: userVaultPDA, // The user vault PDA is the stake authority
+        stakeAuthority: {
+          staker: userVaultPDA,
+          withdrawer: userVaultPDA
+        },
         systemProgram: anchor.web3.SystemProgram.programId,
         stakeProgram: anchor.web3.StakeProgram.programId,
       })
@@ -424,6 +433,7 @@ const withdrawRewards = async () => {
       setCreatorData({
         creator: account.creator.toString(),
         name: account.name,
+        validator: account.validator.toString(),
         totalSubcribers: account.totalSubcribers.toString(),
         balance: account.balance.toString(),
         bump: account.bump
@@ -890,208 +900,138 @@ const withdrawRewards = async () => {
     }
   };
 
-  // Schedule the cron job to run every hour
- // const stakeDeactivationCron = cron.schedule('0 * * * *', checkStakeAccountDeactivation);
-
-  // const withdrawUnstakedSOL = async () => {
-  //   try {
-  //     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-  //     const program = getProgram();
-
-  //     // Predefined creator public key
-  //     const creatorPublicKey = new PublicKey("tVZyEqNfxXvFz5TZaRvggfxAnqjHksZdCp9BRQnXs35");
-
-  //     // Fetch the creator vault to get the name
-  //     const [creatorVaultPDA] = PublicKey.findProgramAddressSync(
-  //       [Buffer.from('creator_vault'), creatorPublicKey.toBuffer()],
-  //       program.programId
-  //     );
-
-  //     const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
-  //     const creatorName = creatorVaultAccount.name;
-
-  //     if (!publicKey) {
-  //       console.log('Public key is not available');
-  //       return;
-  //     }
+  const unstakeSol = async () => {
+    if (!publicKey) {
+      alert('Please connect your wallet.');
+      return;
+    }
+    try {
+      const program = getProgram();
       
-  //     // Now use the correct seeds to find the user vault PDA
-  //     const [userPDA] = PublicKey.findProgramAddressSync(
-  //       [
-  //         Buffer.from('user_vault'),
-  //         publicKey.toBuffer(),
-  //         Buffer.from(creatorName)
-  //       ],
-  //       program.programId
-  //     );
+      
+      const creatorPublicKey = new PublicKey("tVZyEqNfxXvFz5TZaRvggfxAnqjHksZdCp9BRQnXs35");
+      const [creatorVaultPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from('creator_vault'), creatorPublicKey.toBuffer()],
+        program.programId
+      );
+
+      const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
+      const creatorName = creatorVaultAccount.name;
+
+      const [userVaultPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from('user_vault'), publicKey.toBuffer(), Buffer.from(creatorName)],
+        program.programId
+      );
+
+      // Assuming you have the stake account pubkey stored
+      const stakeAccountPubkey = new PublicKey(userVaultData.stakeAccount);
 
       
-  //     // Call the withdrawandcloseuservault method
-  //     const tx = await program.methods.withdrawandcloseuservault().accounts({
-  //       user: publicKey,
-  //       creator: creatorPublicKey,
-  //       creatorVault: creatorVaultPDA,
-  //       userVault: userPDA,
-  //       systemProgram: anchor.web3.SystemProgram.programId,
-  //     }).rpc();
 
-  //     console.log('User vault withdrawn and closed successfully');
-  //     console.log('Transaction signature:', tx);
-  //     alert(`User vault withdrawn and closed successfully!\nTransaction signature: ${tx}`);
+      await program.methods
+        .unstakeSol()
+        .accounts({
+          user: publicKey,
+          creator: creatorPublicKey,
+          userVault: userVaultPDA,
+          creatorVault: creatorVaultPDA,
+          stakeAccount: stakeAccountPubkey,
+          stakeAuthority: userVaultPDA,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          stakeProgram: StakeProgram.programId,
+        })
+        .rpc();
+
+      alert('Unstaking initiated. Please wait for deactivation period to complete.');
+
+      // Optionally, update local state or UI
+    } catch (error) {
+      console.error('Error unstaking SOL:', error);
+      alert(`Failed to unstake SOL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const withdrawUnstakedSol = async () => {
+    if (!publicKey) {
+      alert('Please connect your wallet.');
+      return;
+    }
+    try {
+      const program = getProgram();
+      const connection = program.provider.connection;
+
+      // Fetch the creator vault to get the name
+      const creatorPublicKey = new PublicKey("tVZyEqNfxXvFz5TZaRvggfxAnqjHksZdCp9BRQnXs35");
+      const [creatorVaultPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from('creator_vault'), creatorPublicKey.toBuffer()],
+        program.programId
+      );
       
-  //     // Refresh user data after withdrawal
-  //     await fetchUserData();
-  //   } catch (error) {
-  //     console.error('Error withdrawing and closing user vault:', error);
-  //     if (error instanceof Error) {
-  //       alert(`Failed to withdraw and close user vault: ${error.message}`);
-  //     } else {
-  //       alert('Failed to withdraw and close user vault: Unknown error');
-  //     }
-  //   }
-  // };
-
-  // const transferSOLToCreatorVault = async () => {
-  //   try {
-  //     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-  //     const program = getProgram();
-
-  //     // Predefined creator public key
-  //     const creatorPublicKey = new PublicKey("tVZyEqNfxXvFz5TZaRvggfxAnqjHksZdCp9BRQnXs35");
-
-  //     // Fetch the creator vault to get the name
-  //     const [creatorVaultPDA] = PublicKey.findProgramAddressSync(
-  //       [Buffer.from('creator_vault'), creatorPublicKey.toBuffer()],
-  //       program.programId
-  //     );
-
-  //     const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
-  //     const creatorName = creatorVaultAccount.name;
-
-  //     if (!publicKey) {
-  //       console.log('Public key is not available');
-  //       return;
-  //     }
+      const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
+      const creatorName = creatorVaultAccount.name;
       
-  //     // Now use the correct seeds to find the user vault PDA
-  //     const [userPDA] = PublicKey.findProgramAddressSync(
-  //       [
-  //         Buffer.from('user_vault'),
-  //         publicKey.toBuffer(),
-  //         Buffer.from(creatorName)
-  //       ],
-  //       program.programId
-  //     );
+      // Derive the user vault PDA
+      const [userVaultPDA] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('user_vault'),
+          publicKey.toBuffer(),
+          Buffer.from(creatorName)
+        ],
+        program.programId
+      );
 
-  //     // Call the transfertocreatorvault method
-  //     const tx = await program.methods.transfertocreatorvault().accounts({
-  //       user: publicKey,
-  //       creator: creatorPublicKey,
-  //       creatorVault: creatorVaultPDA,
-  //       userVault: userPDA,
-  //       systemProgram: anchor.web3.SystemProgram.programId,
-  //     }).rpc();
+      // Fetch the user vault account to get the stake account
+      const userVaultAccount = await program.account.userVault.fetch(userVaultPDA);
+      const stakeAccountPubkey = new PublicKey(userVaultAccount.stakeAccount);
 
-  //     console.log('SOL transferred to creator vault successfully');
-  //     console.log('Transaction signature:', tx);
-  //     alert(`SOL transferred to creator vault successfully!\nTransaction signature: ${tx}`);
-      
-  //     // Refresh user data after withdrawal
-  //     await fetchUserData();
-  //   } catch (error) {
-  //     console.error('Error transferring SOL to creator vault:', error);
-  //     if (error instanceof Error) {
-  //       alert(`Failed to transfer SOL to creator vault: ${error.message}`);
-  //     } else {
-  //       alert('Failed to transfer SOL to creator vault: Unknown error');
-  //     }
-  //   }
-  // };
+      try {
+        console.log("User public key:", publicKey.toBase58());
+        console.log("Stake account public key:", stakeAccountPubkey.toBase58());
+        
+        // Call the withdrawUnstakedSol instruction
+        await program.methods
+          .withdrawunstakedsol()
+          .accounts({
+            user: publicKey,
+            creator: creatorPublicKey,
+            userVault: userVaultPDA,
+            creatorVault: creatorVaultPDA,
+            stakeAccount: stakeAccountPubkey,
+            stakeAuthority: userVaultPDA,
+            systemProgram: anchor.web3.SystemProgram.programId,
+            stakeProgram: anchor.web3.StakeProgram.programId,
+          })
+          .rpc();
 
-  // const handleCreatorWithdraw = async () => {
-  //   if (!publicKey) {
-  //     console.log('No public key available');
-  //     return;
-  //   }
-  //   try {
-  //     const program = getProgram();
-  //     const [creatorPDA] = await PublicKey.findProgramAddressSync(
-  //       [Buffer.from('creator_pda'), publicKey.toBuffer()],
-  //       program.programId
-  //     );
+        console.log('Withdrawal successful');
+        alert('Withdrawal successful. Your SOL has been returned to your wallet.');
 
-  //     const tx = await program.methods.withdrawandclosecreatorvault().accounts({
-  //       creator: publicKey,
-  //       creatorPda: creatorPDA,
-  //       systemProgram: anchor.web3.SystemProgram.programId,
-  //     }).rpc();
+        // Optionally, update local state or UI
+        await fetchUserData();
+      } catch (error) {
+        console.error("Error in withdrawUnstakedSol:", error);
+        if (error instanceof Error) {
+          alert(`Failed to withdraw unstaked SOL: ${error.message}`);
+        } else {
+          alert("Failed to withdraw unstaked SOL: Unknown error");
+        }
+      }
+    } catch (error) {
+      console.error('Error withdrawing unstaked SOL:', error);
+      alert(`Failed to withdraw unstaked SOL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
 
-  //     console.log('Creator vault withdrawn and closed successfully');
-  //     console.log('Transaction signature:', tx);
-  //     alert(`Creator vault withdrawn and closed successfully!\nTransaction signature: ${tx}`);
-      
-  //     // Refresh creator data after withdrawal
-  //     await fetchCreatorData();
-  //   } catch (error) {
-  //     console.error('Error withdrawing and closing creator vault:', error);
-  //     if (error instanceof Error) {
-  //       alert(`Failed to withdraw and close creator vault: ${error.message}`);
-  //     } else {
-  //       alert('Failed to withdraw and close creator vault: Unknown error');
-  //     }
-  //   }
-  // };
-
-  // const handleUserWithdraw = async () => {
-  //   if (!publicKey || !userData) {
-  //     console.log('No public key or user data available');
-  //     return;
-  //   }
-  //   try {
-  //     const program = getProgram();
-  //     const creatorPubkey = userData.creator; // This is already a PublicKey object
-
-  //     // Fetch the creator vault to get the name
-  //     const [creatorVaultPDA] = await PublicKey.findProgramAddressSync(
-  //       [Buffer.from('creator_vault'), creatorPubkey.toBuffer()],
-  //       program.programId
-  //     );
-  //     const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
-  //     const creatorName = creatorVaultAccount.name;
-
-  //     // Derive the user vault PDA using the correct seeds
-  //     const [userVaultPDA] = await PublicKey.findProgramAddressSync(
-  //       [Buffer.from('user_vault'), publicKey.toBuffer(), Buffer.from(creatorName)],
-  //       program.programId
-  //     );
-
-  //     console.log('User public key:', publicKey.toBase58());
-  //     console.log('Creator public key:', creatorPubkey.toBase58());
-  //     console.log('User Vault PDA:', userVaultPDA.toBase58());
-
-  //     const tx = await program.methods.withdrawandcloseuservault().accounts({
-  //       user: publicKey,
-  //       creator: creatorPubkey,
-  //       creatorVault: creatorVaultPDA,
-  //       userVault: userVaultPDA,
-  //       systemProgram: anchor.web3.SystemProgram.programId,
-  //     }).rpc();
-
-  //     console.log('User vault withdrawn and closed successfully');
-  //     console.log('Transaction signature:', tx);
-  //     alert(`User vault withdrawn and closed successfully!\nTransaction signature: ${tx}`);
-      
-  //     // Refresh user data after withdrawal
-  //     await fetchUserData();
-  //   } catch (error) {
-  //     console.error('Error withdrawing and closing user vault:', error);
-  //     if (error instanceof Error) {
-  //       alert(`Failed to withdraw and close user vault: ${error.message}`);
-  //     } else {
-  //       alert('Failed to withdraw and close user vault: Unknown error');
-  //     }
-  //   }
-  // };
+  const fetchAvailableValidators = async () => {
+    // This is a simplified example. In a real-world scenario, you'd need to implement
+    // logic to fetch actual validators from the Solana network.
+    const validators = [
+      new PublicKey('5MrQ888HbPthezJu4kWg9bFfZg2FMLtQWzixQgNNX48B'),
+      new PublicKey('vgcDar2pryHvMgPkKaZfh8pQy4BJxv7SpwUG7zinWjG'),
+      new PublicKey('7AETLyAGJWjp6AWzZqZcP362yv5LQ3nLEdwnXNjdNwwF'),
+    ];
+    setAvailableValidators(validators);
+  };
 
   useEffect(() => {
     if (publicKey && creatorPDA) {
@@ -1112,18 +1052,41 @@ const withdrawRewards = async () => {
     }
   }, [publicKey]);
 
+  useEffect(() => {
+    fetchAvailableValidators();
+  }, []);
+
   return (
-    <AppHero title="Dashboard" subtitle="Welcome to your dashboard">
+    <AppHero title="Hero2GO" subtitle="Share your stories with the world">
       <div className="flex flex-col items-center justify-center min-h-screen py-2">
         <div className="p-6 bg-white rounded-md shadow-md w-96">
           <h1 className="text-2xl font-semibold mb-4">Dashboard</h1>
           <div className="flex flex-col space-y-4">
+          <input
+              type="text"
+              value={creatorName}
+              onChange={(e) => setCreatorName(e.target.value)}
+              placeholder="Enter Hero/Creator Name"
+              className="w-full px-3 py-2 mb-4 border rounded-md"
+            />
+          <select
+              onChange={(e) => setSelectedValidator(new PublicKey(e.target.value))}
+              value={selectedValidator?.toBase58() || ''}
+            >
+              <option value="HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU">Helius (Default Validator)</option>
+              {availableValidators.map((validator) => (
+                <option key={validator.toBase58()} value={validator.toBase58()}>
+                  {validator.toBase58()}
+                </option>
+              ))}
+            </select>
             <button
               onClick={initializeCreator}
               className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              Initialize Creator
+              Initialize Hero/Creator
             </button>
+            
             <div className="flex items-center space-x-2">
               <input
                 type="number"
@@ -1132,44 +1095,55 @@ const withdrawRewards = async () => {
                 placeholder="Amount of SOL"
                 className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
+              {creatorData && (
               <button
                 onClick={initUserAndStakeSOL}
-                className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                Initialize User and Stake SOL
+                Subscribe to {creatorData.name || 'Hero/Creator'}
               </button>
+              )}
             </div>
-
+            {creatorData && (
             <button
               onClick={calculateAndSplitRewards}
              className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
             >
-              Calculate and Split Rewards
+              Calculate and Split Rewards to be transferred to {creatorData.name || 'Hero/Creator'}
             </button>
-
+            )}
+{creatorData && (
             <button
               onClick={withdrawRewards}
               className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
             >
-  Withdraw Rewards
+  Transfer Rewards to {creatorData.name || 'Hero/Creator'}
 </button>
+)}
 
-            {/* Display Creator Vault PDA State Fields */}
-            {/* {creatorPDA && (
-              <div className="mt-4">
-                <h2 className="text-lg font-semibold mb-2">Creator Vault PDA State</h2>
-                <div className="bg-gray-100 p-3 rounded-md">
-                  <p><strong>Creator PDA:</strong> {creatorPDA}</p>
-                  
-                </div>
-              </div>
-            )} */}
+{creatorData && (
+            <button
+              onClick={unstakeSol}
+              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+            >
+              Unsubscribe from {creatorData.name || 'Hero/Creator'}
+            </button>
+)}
+
+            <button
+              onClick={withdrawUnstakedSol}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+            >
+              Withdraw your  Unstaked SOL
+            </button>
+
 
 {creatorData && (
               <div>
                 <h2>Creator Vault Data</h2>
                 <p>Creator: {creatorData.creator}</p>
                 <p>Name: {creatorData.name}</p>
+                <p>Validator: {creatorData.validator}</p>
                 <p>Total Subscribers: {creatorData.totalSubcribers}</p>
                 <p>Balance: {creatorData.balance} lamports</p>
                 <p>Bump: {creatorData.bump}</p>
@@ -1204,6 +1178,8 @@ const withdrawRewards = async () => {
                 </ul>
               </div>
             )}
+
+            
           </div>
         </div>
       </div>
