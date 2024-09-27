@@ -63,32 +63,6 @@ export const hero = {
       ],
       "args": []
     },
-
-    {
-      "name": "initadmin",
-      "accounts": [
-        {
-          "name": "admin",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "adminVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-
-
-
-
     {
       "name": "deposit",
       "accounts": [
@@ -204,16 +178,6 @@ export const hero = {
           "isMut": false,
           "isSigner": false
         },
-        // {
-        //   "name": "admin",
-        //   "isMut": false,
-        //   "isSigner": false
-        // },
-        // {
-        //   "name": "adminVault",
-        //   "isMut": true,
-        //   "isSigner": false
-        // },
         {
           "name": "userVault",
           "isMut": true,
@@ -428,26 +392,6 @@ export const hero = {
     }
   ],
   "accounts": [
-    {
-      "name": "AdminVault",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "admin",
-            "type": "publicKey"
-          },
-          {
-            "name": "balance",
-            "type": "u64"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
     {
       "name": "CreatorVault",
       "type": {
@@ -631,32 +575,6 @@ export const idl = {
       ],
       "args": []
     },
-
-    {
-      "name": "initadmin",
-      "accounts": [
-        {
-          "name": "admin",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "adminVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-
-
-
-
     {
       "name": "deposit",
       "accounts": [
@@ -772,16 +690,6 @@ export const idl = {
           "isMut": false,
           "isSigner": false
         },
-        // {
-        //   "name": "admin",
-        //   "isMut": false,
-        //   "isSigner": false
-        // },
-        // {
-        //   "name": "adminVault",
-        //   "isMut": true,
-        //   "isSigner": false
-        // },
         {
           "name": "userVault",
           "isMut": true,
@@ -997,26 +905,6 @@ export const idl = {
   ],
   "accounts": [
     {
-      "name": "AdminVault",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "admin",
-            "type": "publicKey"
-          },
-          {
-            "name": "balance",
-            "type": "u64"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
       "name": "CreatorVault",
       "type": {
         "kind": "struct",
@@ -1132,3 +1020,4 @@ export const idl = {
     "address": "8it9v1wRMskenGKUnq7Euh85tWtUwvWco6wUy7uyZbSS"
   }
 };
+

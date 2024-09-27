@@ -7,7 +7,7 @@ use anchor_lang::prelude::*;
 //declare_id!("FyNFEUPNAmVfvjXdTriorh71vsC1jdMi2HxkHujnWWUM");
 //declare_id!("DEXA1SPRbDf4tugo6TeePTqUnN9QNSiz1XRRdaMosWPa");
 
-declare_id!("8it9v1wRMskenGKUnq7Euh85tWtUwvWco6wUy7uyZbSS");
+declare_id!("7HKw3kr2UUEXPW4t3vcPR4VYBwdX3EyZru9QM5jzeLjv");
 
 
 
@@ -26,6 +26,10 @@ pub mod hero_anchor_program {
     
 
     use super::*;
+
+    pub fn initadmin(ctx: Context<InitAdmin>) -> Result<()> {
+        ctx.accounts.initadmin(&ctx.bumps)
+    }
 
      pub fn initcreator(ctx: Context<InitCreator>, name: String, validator: Pubkey) -> Result<()> {
         ctx.accounts.initcreator(name, validator, &ctx.bumps)

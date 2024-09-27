@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { AppHero } from '../ui/ui-layout';
 import { useWallet, useConnection, useAnchorWallet } from '@solana/wallet-adapter-react';
-import { PublicKey, Keypair, StakeProgram, SystemProgram, LAMPORTS_PER_SOL, Authorized, Transaction, sendAndConfirmTransaction, Lockup, Connection, clusterApiUrl } from '@solana/web3.js';
+import { PublicKey, Keypair, StakeProgram, LAMPORTS_PER_SOL, Authorized, Transaction, sendAndConfirmTransaction, Lockup, Connection, clusterApiUrl } from '@solana/web3.js';
 import * as anchor from '@project-serum/anchor';
 import { idl } from '../solana/idl/hero_anchor_program';
 import { Idl } from '@project-serum/anchor';
@@ -11,7 +11,7 @@ import { Address, AnchorProvider, BN, Program, Wallet } from "@coral-xyz/anchor"
 import { findAllStakeAccountsByAuth } from '@soceanfi/solana-stake-sdk';
 //import cron from 'node-cron';
 
-const PROGRAM_ID = new PublicKey('7HKw3kr2UUEXPW4t3vcPR4VYBwdX3EyZru9QM5jzeLjv');
+const PROGRAM_ID = new PublicKey('8it9v1wRMskenGKUnq7Euh85tWtUwvWco6wUy7uyZbSS');
 
 export default function DashboardFeature() {
   const { publicKey } = useWallet();
@@ -34,8 +34,6 @@ export default function DashboardFeature() {
   const [selectedValidator, setSelectedValidator] = useState<PublicKey | null>(null);
   const [availableValidators, setAvailableValidators] = useState<PublicKey[]>([]);
   const [creatorName, setCreatorName] = useState('');
-  const [adminPDA, setAdminPDA] = useState<string>('');
-  const [adminData, setAdminData] = useState<{ admin: string; balance: string } | null>(null);
 
   const getProgram = () => {
     console.log('Getting program');
@@ -59,41 +57,6 @@ export default function DashboardFeature() {
       return program;
     } catch (error) {
       console.error('Error creating program:', error);
-      throw error;
-    }
-  };
-
-  const initializeAdmin = async () => {
-    if (!publicKey) {
-      console.log('No wallet connected');
-      return;
-    }
-    try {
-      const program = getProgram();
-      const [adminVaultPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from("admin_vault"), publicKey.toBuffer()],
-        program.programId
-      );
-    
-      console.log("Initializing Admin Vault...");
-      
-      const tx = await program.methods.initadmin()
-        .accounts({
-          admin: publicKey,
-          adminVault: adminVaultPDA,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([])
-        .rpc();
-  
-      console.log("Admin Vault initialized successfully. Transaction signature:", tx);
-      console.log("Admin Vault PDA:", adminVaultPDA.toString());
-      
-      setAdminPDA(adminVaultPDA.toBase58());
-      //await fetchAdminData(adminVaultPDA);
-      fetchAdminData();
-    } catch (error) {
-      console.error("Error initializing Admin Vault:", error);
       throw error;
     }
   };
@@ -172,11 +135,6 @@ export default function DashboardFeature() {
         program.programId
       );
 
-      const [adminVaultPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from("admin_vault"), publicKey.toBuffer()],
-        program.programId
-      );
-
       // Generate a unique seed for the stake account
       const seed = `stake-${creatorName}-${Date.now()}`;
 
@@ -200,14 +158,8 @@ export default function DashboardFeature() {
         return;
       }
 
-      // Define the fee percentage
-      const feePercentage = 1; // 1%
-
-      // Calculate the fee amount
-      const feeAmount = (totalLamports * feePercentage) / 100;
-
-      // Amount to stake after deducting the fee
-      const stakeLamports = totalLamports - feeAmount - rentExemptAmount;
+      // Amount to stake after covering rent-exempt
+      const stakeLamports = totalLamports - rentExemptAmount;
 
       // Check if userPDA already exists
       let userAccountExists = false;
@@ -240,22 +192,9 @@ export default function DashboardFeature() {
           })
           .instruction();
         instructions.push(initUserIx);
-        console.log('initUserIx:', initUserIx);
       }
 
-      
-
-      // Instruction: Transfer fee to AdminVault
-      const transferFeeIx = SystemProgram.transfer({
-        fromPubkey: publicKey,
-        toPubkey: adminVaultPDA, // You need to define adminVaultPublicKey
-        lamports: feeAmount,
-      });
-      instructions.push(transferFeeIx);
-
-      console.log('Admin Vault PDA:', adminVaultPDA.toBase58());
-
-      // Instruction: Create stake account with the stake amount after fee
+      // Instruction: create stake account with seed
       const createStakeAccountIx = StakeProgram.createAccountWithSeed({
         fromPubkey: publicKey,
         stakePubkey: stakeAccount,
@@ -265,8 +204,6 @@ export default function DashboardFeature() {
         lockup: new Lockup(0, 0, userPDA),
         lamports: stakeLamports + rentExemptAmount,
       });
-      //instructions.push(createStakeAccountIx);
-      console.log('createStakeAccountIx:', createStakeAccountIx);
 
       // Fetch the CreatorVault account data
       //const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
@@ -274,17 +211,15 @@ export default function DashboardFeature() {
       // Use the validator public key from the CreatorVault account
       const validatorPubkey = creatorVaultAccount.validator;
 
-      // Instruction: stake SOL (passing the total amount including the fee)
+      // Instruction: stake SOL
       const stakeSolIx = await program.methods
-        .stakesol(new BN(totalLamports))
+        .stakesol(new BN(stakeLamports))
         .accounts({
           user: publicKey,
-          //admin: publicKey,
           creator: creatorPublicKey,
           userVault: userPDA,
           creatorVault: creatorVaultPDA,
-         // adminVault: adminVaultPDA,
-          validatorVote: validatorPubkey,
+          validatorVote: validatorPubkey, // Use the validator from the CreatorVault
           stakeAccount: stakeAccount,
           systemProgram: anchor.web3.SystemProgram.programId,
           stakeProgram: StakeProgram.programId,
@@ -480,46 +415,7 @@ const withdrawRewards = async () => {
   }
 };
 
-const fetchAdminData = async () => {
-  if (!publicKey) {
-    console.log('No wallet connected');
-    return;
-  }
-  try {
-    const program = getProgram();
 
-    const [adminVaultPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from('admin_vault'), publicKey.toBuffer()],
-      program.programId
-    );
-    const adminVaultAccount = await program.account.adminVault.fetch(adminVaultPDA);
-    setAdminData({
-      admin: adminVaultAccount.admin.toString(),
-      balance: adminVaultAccount.balance.toString(),
-    });
-    setAdminPDA(adminVaultPDA.toBase58());
-  } catch (error) {
-    console.error("Error fetching Admin Vault data:", error);
-  }
-};
-
-useEffect(() => {
-  if (publicKey) {
-    fetchAdminData();
-  }
-}, [publicKey]);
-
-// return (
-//   <div>
-//     {/* ... other components ... */}
-//     <div>
-//       <h3>Admin Vault Data</h3>
-//       <p>Admin PDA: {adminPDA}</p>
-//       <p>Admin: {adminData.admin}</p>
-//       <p>Balance: {adminData.balance}</p>
-//     </div>
-//   </div>
-// );
 
 
   const fetchCreatorData = async () => {
@@ -1166,21 +1062,6 @@ useEffect(() => {
         <div className="p-6 bg-white rounded-md shadow-md w-96">
           <h1 className="text-2xl font-semibold mb-4">Dashboard</h1>
           <div className="flex flex-col space-y-4">
-          {adminData && (
-              <div className="mt-4">
-                <h2 className="text-lg font-semibold mb-2">Admin Vault Data</h2>
-                <div className="bg-gray-100 p-3 rounded-md">
-                  <p><strong>Admin:</strong> {adminData.admin}</p>
-                  <p><strong>Balance:</strong> {adminData.balance} lamports</p>
-                </div>
-              </div>
-            )}
-          <button 
-        onClick={initializeAdmin}
-        className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-        Initialize Admin
-        </button>
           <input
               type="text"
               value={creatorName}

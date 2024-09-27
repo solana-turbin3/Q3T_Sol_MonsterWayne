@@ -9,7 +9,6 @@ pub struct StakeSol<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     pub creator: SystemAccount<'info>,
-    //pub admin: SystemAccount<'info>,
 
     #[account(
         mut,

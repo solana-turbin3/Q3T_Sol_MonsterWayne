@@ -1,3 +1,4 @@
+pub mod initadmin;
 pub mod inituser;
 pub mod deposit;
 //pub mod createstakeaccount;
@@ -23,9 +24,10 @@ pub mod updatevalidator;
 //pub mod withdrawstake;
 
 
-
+pub use initadmin::*;
 pub use inituser::*;
 pub use deposit::*;
+
 //pub use createstakeaccount::*;
 pub use initcreator::*;
 pub use stakesol::*;

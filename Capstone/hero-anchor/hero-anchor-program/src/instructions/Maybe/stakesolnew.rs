@@ -2,15 +2,14 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::stake::state::{Authorized, Lockup};
 use anchor_lang::solana_program::stake::instruction as stake_instruction;
 use anchor_lang::solana_program::{stake, system_instruction, sysvar};
-use crate::{CreatorVault, UserVault};
+use crate::{AdminVault, CreatorVault, UserVault};
 
 #[derive(Accounts)]
 pub struct StakeSol<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     pub creator: SystemAccount<'info>,
-    //pub admin: SystemAccount<'info>,
-
+    pub admin: SystemAccount<'info>,
     #[account(
         mut,
         seeds = [b"user_vault", user.key().as_ref(), creator_vault.name.as_ref()],
@@ -25,10 +24,18 @@ pub struct StakeSol<'info> {
     )]
     pub creator_vault: Account<'info, CreatorVault>,
 
+    /// Admin Vault Account
+    #[account(
+        mut,
+        seeds = [b"admin_vault", admin.key().as_ref()],
+        bump = admin_vault.bump
+    )]
+    pub admin_vault: Account<'info, AdminVault>,
+
     /// CHECK: This is the validator's vote account
     pub validator_vote: UncheckedAccount<'info>,
 
-    /// CHECK: The stake account created and initialized on the client side
+    /// CHECK: The stake account created and initialized by the client
     #[account(mut)]
     pub stake_account: UncheckedAccount<'info>,
 
@@ -45,8 +52,31 @@ pub struct StakeSol<'info> {
 
 impl<'info> StakeSol<'info> {
     pub fn stakesol(&mut self, amount: u64) -> Result<()> {
-        // Delegate the stake
+        // Define the fee percentage (e.g., 1%)
+        let fee_percentage = 1u64; // 1%
+        let fee_amount = amount.checked_mul(fee_percentage).unwrap().checked_div(100).unwrap();
 
+        // Calculate the amount to stake after deducting the fee
+        let amount_after_fee = amount.checked_sub(fee_amount).unwrap();
+
+        // Transfer the fee from the user's account to the Admin Vault
+        let transfer_fee_ix = anchor_lang::solana_program::system_instruction::transfer(
+            &self.user.key(),
+            &self.admin_vault.key(),
+            fee_amount,
+        );
+
+        // Invoke the transfer instruction
+        anchor_lang::solana_program::program::invoke(
+            &transfer_fee_ix,
+            &[
+                self.user.to_account_info(),
+                self.admin_vault.to_account_info(),
+                self.system_program.to_account_info(),
+            ],
+        )?;
+
+        // Delegate the stake
         // Build the delegate stake instruction
         let delegate_ix = stake_instruction::delegate_stake(
             &self.stake_account.key(),
@@ -76,11 +106,11 @@ impl<'info> StakeSol<'info> {
             ]],
         )?;
 
-        // Update user data
+        // Update user data with the amount after fee deduction
         self.user_vault.staked_amount = self
             .user_vault
             .staked_amount
-            .checked_add(amount)
+            .checked_add(amount_after_fee)
             .unwrap();
 
         self.user_vault.stake_account = *self.stake_account.key;
