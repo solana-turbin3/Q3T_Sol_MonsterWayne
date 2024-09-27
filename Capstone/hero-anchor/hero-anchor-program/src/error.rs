@@ -20,6 +20,7 @@ pub enum ErrorCode {
     NoFundsToWithdraw,
     #[msg("Stake account not initialized.")]
     StakeAccountNotInitialized,
-
+    #[msg("Stake account activating.")]
+    StakeAccountActivating,
     // Add other error codes as needed
 }
