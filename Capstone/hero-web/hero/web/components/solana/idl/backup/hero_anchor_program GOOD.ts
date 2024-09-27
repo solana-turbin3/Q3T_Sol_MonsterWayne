@@ -1,5 +1,5 @@
 export type hero ={
-  "address": "vURApwxeh6Rm7wa6vFkBihAoGbQ251By2bLbwoxX8Cc",
+  "address": "DtCXMdVV52L1JJ2hu4RBaCqTudZf9jVxXgnt59bsjuTp",
   "metadata": {
     "name": "hero_anchor_program",
     "version": "0.1.0",
@@ -1237,8 +1237,12 @@ export type hero ={
   ]
 }
 
+
+
+
+
 export const IDL: hero = {
-  "address": "vURApwxeh6Rm7wa6vFkBihAoGbQ251By2bLbwoxX8Cc",
+  "address": "DtCXMdVV52L1JJ2hu4RBaCqTudZf9jVxXgnt59bsjuTp",
   "metadata": {
     "name": "hero_anchor_program",
     "version": "0.1.0",

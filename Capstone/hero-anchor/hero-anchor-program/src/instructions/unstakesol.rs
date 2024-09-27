@@ -11,15 +11,13 @@ use crate::error::ErrorCode;
 pub struct UnstakeSol<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
-
-    /// CHECK: The creator's system account
     pub creator: SystemAccount<'info>,
 
     #[account(
         mut,
         seeds = [b"user_vault", user.key.as_ref(), creator_vault.name.as_ref()],
         bump = user_vault.bump,
-        has_one = user,
+        has_one = user, //
     )]
     pub user_vault: Account<'info, UserVault>,
 
@@ -42,7 +40,15 @@ pub struct UnstakeSol<'info> {
     pub stake_authority: UncheckedAccount<'info>,
 
     /// System Program
-    pub system_program: Program<'info, System>,
+    //pub system_program: Program<'info, System>,
+
+    //pub rent: Sysvar<'info, Rent>,
+
+   
+   pub clock: Sysvar<'info, Clock>,
+  
+   pub stake_history: Sysvar<'info, StakeHistory>,
+    
 
     /// CHECK: This is the Stake Program ID
     #[account(address = stake::program::ID)]
@@ -55,6 +61,17 @@ impl<'info> UnstakeSol<'info> {
         let stake_authority_info = &self.stake_authority.to_account_info();
         let clock = Clock::get()?;
 
+        // Check the stake account status
+        let stake_state = StakeStateV2::deserialize(&mut &stake_account_info.data.borrow()[..]);
+        match stake_state? {
+            StakeStateV2::Stake(meta, stake, _) => {
+                if stake.delegation.activation_epoch == clock.epoch {
+                    return Err(ErrorCode::StakeAccountActivating.into());
+                }
+            },
+            _ => return Err(ErrorCode::InvalidStakeState.into()),
+        }
+
         // Deactivate the stake account
         let deactivate_ix = stake::instruction::deactivate_stake(
             &stake_account_info.key,
@@ -66,6 +83,8 @@ impl<'info> UnstakeSol<'info> {
             &[
                 stake_account_info.clone(),
                 stake_authority_info.clone(),
+                self.clock.to_account_info(),
+                self.stake_history.to_account_info(),
                 self.stake_program.to_account_info(),
             ],
             &[&[

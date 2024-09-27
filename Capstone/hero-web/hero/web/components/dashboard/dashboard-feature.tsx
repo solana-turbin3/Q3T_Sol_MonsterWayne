@@ -3,15 +3,17 @@
 import { useState, useEffect } from 'react';
 import { AppHero } from '../ui/ui-layout';
 import { useWallet, useConnection, useAnchorWallet } from '@solana/wallet-adapter-react';
-import { PublicKey, Keypair, StakeProgram, SystemProgram, LAMPORTS_PER_SOL, Authorized, Transaction, sendAndConfirmTransaction, Lockup, Connection, clusterApiUrl } from '@solana/web3.js';
+import { PublicKey, Keypair, StakeProgram, SystemProgram, LAMPORTS_PER_SOL, Authorized, Transaction, sendAndConfirmTransaction, Lockup, Connection, clusterApiUrl, SYSVAR_CLOCK_PUBKEY, SYSVAR_STAKE_HISTORY_PUBKEY } from '@solana/web3.js';
 import * as anchor from '@project-serum/anchor';
-import { idl } from '../solana/idl/hero_anchor_program';
+import { IDL , hero } from '../solana/idl/hero_anchor_program';
 import { Idl } from '@project-serum/anchor';
 import { Address, AnchorProvider, BN, Program, Wallet } from "@coral-xyz/anchor";
 import { findAllStakeAccountsByAuth } from '@soceanfi/solana-stake-sdk';
+import { Provider } from 'jotai';
+
 //import cron from 'node-cron';
 
-const PROGRAM_ID = new PublicKey('7HKw3kr2UUEXPW4t3vcPR4VYBwdX3EyZru9QM5jzeLjv');
+const PROGRAM_ID = new PublicKey('vURApwxeh6Rm7wa6vFkBihAoGbQ251By2bLbwoxX8Cc');
 
 export default function DashboardFeature() {
   const { publicKey } = useWallet();
@@ -36,25 +38,30 @@ export default function DashboardFeature() {
   const [creatorName, setCreatorName] = useState('');
   const [adminPDA, setAdminPDA] = useState<string>('');
   const [adminData, setAdminData] = useState<{ admin: string; balance: string } | null>(null);
+  const [adminVaultBalance, setAdminVaultBalance] = useState<number | null>(null);
+  const [adminVaultPubkey, setAdminVaultPubkey] = useState('');
 
   const getProgram = () => {
     console.log('Getting program');
-    const provider = new anchor.AnchorProvider(
+    const provider = new AnchorProvider(
       connection,
       window.solana,
       { preflightCommitment: 'processed' }
     );
     console.log('Provider created:', provider);
     
-    console.log('Creating program with IDL:', idl);
+    console.log('Creating program with IDL:', IDL);
     console.log('Program ID:', PROGRAM_ID.toBase58());
+
     
     try {
-      console.log('IDL:', idl);
+      console.log('IDL:', IDL);
       console.log('PROGRAM_ID:', PROGRAM_ID.toBase58());
       console.log('Provider:', provider);
+
+      const program : Program<hero> = new Program(IDL, provider);
       
-      const program = new anchor.Program(idl as Idl, PROGRAM_ID as Address, provider);
+     // const program  : = new Program( IDL, provider);
       console.log('Program methods:', Object.keys(program.methods));
       return program;
     } catch (error) {
@@ -62,6 +69,8 @@ export default function DashboardFeature() {
       throw error;
     }
   };
+
+  
 
   const initializeAdmin = async () => {
     if (!publicKey) {
@@ -80,20 +89,28 @@ export default function DashboardFeature() {
       const tx = await program.methods.initadmin()
         .accounts({
           admin: publicKey,
-          adminVault: adminVaultPDA,
+          admin_vault: adminVaultPDA,
           systemProgram: SystemProgram.programId,
         })
         .signers([])
         .rpc();
-  
+
       console.log("Admin Vault initialized successfully. Transaction signature:", tx);
       console.log("Admin Vault PDA:", adminVaultPDA.toString());
       
       setAdminPDA(adminVaultPDA.toBase58());
-      //await fetchAdminData(adminVaultPDA);
+      
+      // Display success message to the user
+      alert(`Admin Vault initialized successfully!\nTransaction signature: ${tx}`);
+      
       fetchAdminData();
     } catch (error) {
       console.error("Error initializing Admin Vault:", error);
+      if (error instanceof Error) {
+        alert(`Error initializing Admin Vault: ${error.message}`);
+      } else {
+        alert("An unknown error occurred while initializing Admin Vault");
+      }
       throw error;
     }
   };
@@ -424,11 +441,12 @@ const calculateAndSplitRewards = async () => {
 
 const withdrawRewards = async () => {
   if (!publicKey) {
-    console.log('No wallet connected');
+    alert('Please connect your wallet.');
     return;
   }
   try {
     const program = getProgram();
+    const connection = program.provider.connection;
 
     // Fetch the creator vault to get the name
     const creatorPublicKey = new PublicKey("tVZyEqNfxXvFz5TZaRvggfxAnqjHksZdCp9BRQnXs35");
@@ -440,7 +458,7 @@ const withdrawRewards = async () => {
     const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
     const creatorName = creatorVaultAccount.name;
     
-    // Derive the user vault PDA (which also serves as the stake authority)
+    // Derive the user vault PDA
     const [userVaultPDA] = PublicKey.findProgramAddressSync(
       [
         Buffer.from('user_vault'),
@@ -452,31 +470,51 @@ const withdrawRewards = async () => {
 
     // Fetch the user vault account to get the reward stake account
     const userVaultAccount = await program.account.userVault.fetch(userVaultPDA);
-    const rewardStakeAccountPubkey = userVaultAccount.rewardStakeAccount;
+    const rewardStakeAccountPubkey = userVaultAccount.reward_stake_account;
+
+    // Check if the reward stake account is set and not the default public key
+    if (!rewardStakeAccountPubkey || rewardStakeAccountPubkey.equals(PublicKey.default)) {
+      alert("No rewards available to withdraw. The reward stake account is not set.");
+      return;
+    }
+
+    // Fetch the reward stake account info to check if it exists and has balance
+    const rewardStakeAccountInfo = await connection.getAccountInfo(rewardStakeAccountPubkey);
+    if (!rewardStakeAccountInfo) {
+      alert("The reward stake account does not exist.");
+      return;
+    }
+
+    if (rewardStakeAccountInfo.lamports === 0) {
+      alert("The reward stake account is empty. No rewards to withdraw.");
+      return;
+    }
 
     const tx = await program.methods
-      .withdrawRewards()
+      .withdrawrewards()
       .accounts({
         user: publicKey,
+        creator: creatorPublicKey,
         userVault: userVaultPDA,
+        creatorVault: creatorVaultPDA,
         rewardStakeAccount: rewardStakeAccountPubkey,
-        destinationAccount: publicKey, // Rewards are sent to the user's main wallet
-        stakeAuthority: {
-          staker: userVaultPDA,
-          withdrawer: userVaultPDA
-        },
+        stakeAuthority: userVaultPDA,
         systemProgram: anchor.web3.SystemProgram.programId,
-        stakeProgram: anchor.web3.StakeProgram.programId,
       })
       .rpc();
 
-    console.log('Rewards withdrawn successfully', tx);
+    console.log('Rewards withdrawn successfully');
+    alert('Rewards withdrawn successfully. Transaction signature: ' + tx);
 
-    // Update state if necessary
+    // Optionally, update local state or UI
     await fetchUserData();
   } catch (error) {
-    console.error('Error withdrawing rewards:', error);
-    alert(`Failed to withdraw rewards: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error("Error in withdrawRewards:", error);
+    if (error instanceof Error) {
+      alert(`Failed to withdraw rewards: ${error.message}`);
+    } else {
+      alert("Failed to withdraw rewards: Unknown error");
+    }
   }
 };
 
@@ -489,15 +527,21 @@ const fetchAdminData = async () => {
     const program = getProgram();
 
     const [adminVaultPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from('admin_vault'), publicKey.toBuffer()],
+      [Buffer.from("admin_vault"), publicKey.toBuffer()],
       program.programId
     );
-    const adminVaultAccount = await program.account.adminVault.fetch(adminVaultPDA);
+
+    // Fetch the balance using getBalance method
+    const balance = await connection.getBalance(adminVaultPDA);
+    const solBalance = balance / LAMPORTS_PER_SOL;
+
     setAdminData({
-      admin: adminVaultAccount.admin.toString(),
-      balance: adminVaultAccount.balance.toString(),
+      admin: publicKey.toString(),
+      balance: solBalance.toFixed(9), // Display up to 9 decimal places
     });
     setAdminPDA(adminVaultPDA.toBase58());
+    setAdminVaultBalance(solBalance);
+    setAdminVaultPubkey(adminVaultPDA.toBase58());
   } catch (error) {
     console.error("Error fetching Admin Vault data:", error);
   }
@@ -515,8 +559,9 @@ useEffect(() => {
 //     <div>
 //       <h3>Admin Vault Data</h3>
 //       <p>Admin PDA: {adminPDA}</p>
-//       <p>Admin: {adminData.admin}</p>
-//       <p>Balance: {adminData.balance}</p>
+//       <p>Admin Vault Public Key: {adminVaultPubkey}</p>
+//       <p>Admin: {adminData?.admin}</p>
+//       <p>Balance: {adminVaultBalance !== null ? `${adminVaultBalance.toFixed(9)} SOL` : 'Loading...'}</p>
 //     </div>
 //   </div>
 // );
@@ -1006,52 +1051,65 @@ useEffect(() => {
 
   const unstakeSol = async () => {
     if (!publicKey) {
-      alert('Please connect your wallet.');
+      console.log('No wallet connected');
       return;
     }
     try {
       const program = getProgram();
-      
-      
       const creatorPublicKey = new PublicKey("tVZyEqNfxXvFz5TZaRvggfxAnqjHksZdCp9BRQnXs35");
+
       const [creatorVaultPDA] = PublicKey.findProgramAddressSync(
         [Buffer.from('creator_vault'), creatorPublicKey.toBuffer()],
         program.programId
       );
-
+      
       const creatorVaultAccount = await program.account.creatorVault.fetch(creatorVaultPDA);
       const creatorName = creatorVaultAccount.name;
 
-      const [userVaultPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from('user_vault'), publicKey.toBuffer(), Buffer.from(creatorName)],
+      const [userPDA] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('user_vault'),
+          publicKey.toBuffer(),
+          Buffer.from(creatorName)
+        ],
         program.programId
       );
 
-      // Assuming you have the stake account pubkey stored
-      const stakeAccountPubkey = new PublicKey(userVaultData.stakeAccount);
+      const userVaultAccount = await program.account.userVault.fetch(userPDA);
+      const stakeAccountPubkey = userVaultAccount.stakeAccount;
 
+      console.log("Unstaking SOL...");
       
+      try {
+        await program.methods.unstakesol()
+          .accounts({
+            user: publicKey,
+            creator: creatorPublicKey,
+            userVault: userPDA,
+            creatorVault: creatorVaultPDA,
+            stakeAccount: stakeAccountPubkey,
+            stakeAuthority: userPDA,
+            systemProgram: SystemProgram.programId,
+            stakeProgram: StakeProgram.programId,
+            clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+            stakeHistory: anchor.web3.SYSVAR_STAKE_HISTORY_PUBKEY,
+          })
+          .rpc();
 
-      await program.methods
-        .unstakeSol()
-        .accounts({
-          user: publicKey,
-          creator: creatorPublicKey,
-          userVault: userVaultPDA,
-          creatorVault: creatorVaultPDA,
-          stakeAccount: stakeAccountPubkey,
-          stakeAuthority: userVaultPDA,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          stakeProgram: StakeProgram.programId,
-        })
-        .rpc();
-
-      alert('Unstaking initiated. Please wait for deactivation period to complete.');
-
-      // Optionally, update local state or UI
+        console.log("SOL unstaked successfully");
+        alert('SOL unstaked successfully. You can now withdraw your unstaked SOL.');
+        await fetchUserData();
+      } catch (error) {
+        console.error("Error unstaking SOL:", error);
+        if (error instanceof Error && error.message.includes("StakeAccountActivating")) {
+          alert("Cannot unstake at this time. The stake account is still activating.");
+        } else {
+          alert(`Failed to unstake SOL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
     } catch (error) {
-      console.error('Error unstaking SOL:', error);
-      alert(`Failed to unstake SOL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error in unstakeSol:', error);
+      alert(`Error in unstakeSol: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -1160,21 +1218,54 @@ useEffect(() => {
     fetchAvailableValidators();
   }, []);
 
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      if (!publicKey) {
+        console.log('No wallet connected');
+        return;
+      }
+      try {
+        const program = getProgram();
+
+        const [adminVaultPDA] = PublicKey.findProgramAddressSync(
+          [Buffer.from("admin_vault"), publicKey.toBuffer()],
+          program.programId
+        );
+
+        // Fetch the balance using getBalance method
+        const balance = await connection.getBalance(adminVaultPDA);
+        const solBalance = balance / LAMPORTS_PER_SOL;
+
+        setAdminData({
+          admin: publicKey.toString(),
+          balance: solBalance.toFixed(9), // Display up to 9 decimal places
+        });
+        setAdminPDA(adminVaultPDA.toBase58());
+        setAdminVaultBalance(solBalance);
+        setAdminVaultPubkey(adminVaultPDA.toBase58());
+      } catch (error) {
+        console.error("Error fetching Admin Vault data:", error);
+      }
+    };
+
+    fetchAdminData();
+  }, [publicKey]);
+
   return (
-    <AppHero title="Hero2GO" subtitle="Share your stories with the world">
+    <AppHero title="Hero2GO" subtitle="Share your stories/research, get rewarded and become a Hero">
       <div className="flex flex-col items-center justify-center min-h-screen py-2">
         <div className="p-6 bg-white rounded-md shadow-md w-96">
           <h1 className="text-2xl font-semibold mb-4">Dashboard</h1>
           <div className="flex flex-col space-y-4">
-          {adminData && (
+          
               <div className="mt-4">
                 <h2 className="text-lg font-semibold mb-2">Admin Vault Data</h2>
                 <div className="bg-gray-100 p-3 rounded-md">
-                  <p><strong>Admin:</strong> {adminData.admin}</p>
-                  <p><strong>Balance:</strong> {adminData.balance} lamports</p>
+                  {/*<p><strong>Admin:</strong> {adminVaultPubkey}</p>*/}
+                  <p><strong>Balance:</strong> {adminVaultBalance !== null ? adminVaultBalance.toFixed(9) : 'Loading...'} SOL</p>
                 </div>
               </div>
-            )}
+            
           <button 
         onClick={initializeAdmin}
         className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"

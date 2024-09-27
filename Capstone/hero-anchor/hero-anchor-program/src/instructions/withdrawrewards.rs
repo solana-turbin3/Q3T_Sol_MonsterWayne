@@ -51,6 +51,16 @@ impl<'info> WithdrawRewards<'info> {
         let user_vault = &mut self.user_vault;
         let stake_authority = &self.stake_authority;
 
+        // Check if the reward stake account is set to the default public key
+        if user_vault.reward_stake_account == Pubkey::default() {
+            return Err(ErrorCode::NoRewardsAvailable.into());
+        }
+
+        // Check if the reward stake account has any balance
+        if reward_stake_account_info.lamports() == 0 {
+            return Err(ErrorCode::NoRewardsAvailable.into());
+        }
+
         // Check if the stake account is deactivated
         let stake_state = StakeStateV2::deserialize(&mut &reward_stake_account_info.data.borrow()[..])
             .map_err(|_| ErrorCode::InvalidStakeState)?;
